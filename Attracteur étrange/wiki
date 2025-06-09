@@ -1,0 +1,15 @@
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+def lorenz(t, Y, sigma=10, beta=8/3, rho=28):
+    x, y, z = Y
+    return [sigma * (y - x), x * (rho - z) - y, x * y - beta * z]
+
+sol = solve_ivp(lorenz, [0, 40], [1, 1, 1], t_eval=np.linspace(0, 40, 10000))
+s
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.plot(sol.y[0], sol.y[1], sol.y[2])
+plt.show()
+     
