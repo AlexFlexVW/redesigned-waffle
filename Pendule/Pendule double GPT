@@ -1,0 +1,49 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from numpy import sin, cos
+
+# 1. Paramètres
+g = 9.81
+L1, L2 = 1.0, 1.0
+M1, M2 = 1.0, 1.0
+
+# 2. Équations du mouvement (Lagrange)
+def F(state):
+    th1, w1, th2, w2 = state
+    delta = th2 - th1
+
+    den1 = (M1 + M2)*L1 - M2*L1*cos(delta)**2
+    den2 = (L2/L1)*den1
+
+    # Formules classiques du pendule double
+    dw1 = ((M2*L1*w1*w1*sin(delta)*cos(delta)
+           + M2*g*sin(th2)*cos(delta)
+           + M2*L2*w2*w2*sin(delta)
+           - (M1+M2)*g*sin(th1)) / den1)
+
+    dw2 = ((-M2*L2*w2*w2*sin(delta)*cos(delta)
+           + (M1+M2)*g*sin(th1)*cos(delta)
+           - (M1+M2)*L1*w1*w1*sin(delta)
+           - (M1+M2)*g*sin(th2)) / den2)
+
+    return np.array([w1, dw1, w2, dw2])
+
+# 3. Intégration (EULER OU RK4)
+def step_rk4(state, dt):
+    k1 = F(state)
+    k2 = F(state + dt*k1/2)
+    k3 = F(state + dt*k2/2)
+    k4 = F(state + dt*k3)
+    return state + dt*(k1 + 2*k2 + 2*k3 + k4)/6
+
+# 4. Boucle temporelle
+state = np.radians([120, 0, -10, 0])
+dt = 0.01
+states = []
+
+for i in range(2000):
+    states.append(state)
+    state = step_rk4(state, dt)
+
+states = np.array(states)
+print(states)

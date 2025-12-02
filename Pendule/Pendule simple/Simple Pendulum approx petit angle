@@ -1,0 +1,40 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+w0 = np.sqrt(g/l) # pulsation
+
+# Paramètres numériques
+dt = 0.001        # très petit pas pour limiter l’instabilité
+n = 10000         # nombre d’itérations
+
+# Conditions initiales (petits angles : en radians)
+theta0 = 2 #np.deg2rad(10)#on convertit en radian car les fonctions cos, sin... prennent des radians en entrée
+omega0 = 0.0
+
+# Stockage
+theta = np.zeros(n)
+omega = np.zeros(n)
+t = np.zeros(n)
+
+theta[0] = theta0
+omega[0] = omega0
+
+# Méthode d'Euler
+for i in range(n-1):
+    omega[i+1] = omega[i] - w0**2 * np.sin(theta[i]) * dt
+    theta[i+1] = theta[i] + omega[i+1] * dt
+    t[i+1] = t[i] + dt
+
+# Affichage
+#plt.scatter(t,theta)
+plt.plot(t, theta, label="euler_num")
+plt.plot(t, theta0 * np.cos(w0 * t), label="théorique")
+plt.xlabel("Temps (s)")
+plt.ylabel("Angle (rad)")
+plt.title("Pendule simple — Euler explicite (petit angle)")
+plt.legend()
+plt.grid()
+plt.show()
