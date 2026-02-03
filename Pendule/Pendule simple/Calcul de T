@@ -32,29 +32,42 @@ for i in range(n-1):
     t[i+1] = t[i] + dt
 
 
-#Calcul de T en fonction de theta0
+#Calcul de T avec des max locaux
 for i in range (1,n-1):
-    if theta[i-1]<theta[i] and theta[i]>theta[i+1]:
-        print(theta[i])
+    if theta[i-1]<theta[i] and theta[i]>theta[i+1]:#on regarde les max locaux
         T_liste.append(t[i]-t_max)
         theta_max=theta[i]
         t_max=t[i]
+nb_occ=len(T_liste)
+occurences=[i for i in range(len(T_liste))]
+    
+#T0 Période propre
+T0 = 2*np.pi/w0
+ 
+#Calcul de la période théorique 
+# On évite x = theta0
+eps = 1e-9
+x = np.linspace(0, theta0 - eps, 1000)#plus on augmente n plus on rapproche la solution théorique de la réalité
+f = 1.0/np.sqrt(2*(np.cos(x) - np.cos(theta0)))
+integrale = np.trapezoid(f, x)
+T_theo = (2*T0/np.pi)*integrale
 
 print("Liste des périodes détectées :", T_liste)
-print("Période moyenne :", np.mean(T_liste))
+print("Période moyenne :", np.mean(T_liste))#moyenne
+print("T0 :", T0)
+print("Période théorique :", T_theo,"s")
 
-T0 = 2*np.pi/w0
 
 # Affichage
 '''plt.plot(t, theta, label="euler_num")
 plt.plot(t, theta0 * np.cos(w0 * t), label="théorique")
 '''
-plt.plot(t, theta, label="θ(t) numérique (Euler)")
-plt.plot(t, theta0 * np.cos(w0*t), label="Solution analytique", linestyle="--")
+plt.plot(occurences, T_liste, label="T(occurence) numérique (méth des max locaux)")
+plt.plot(occurences, [T0]*len(T_liste), label="T analytique", linestyle="--")
 
-plt.xlabel("Temps (s)")
-plt.ylabel("Angle (rad)")
-plt.title("Pendule simple — Euler explicite")
+plt.xlabel("Occurences")
+plt.ylabel("Période T (s)")
+plt.title("Calcul de T")
 plt.legend()
 plt.grid()
 plt.show()
