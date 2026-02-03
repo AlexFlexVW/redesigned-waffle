@@ -1,0 +1,69 @@
+from scipy.linalg import solve
+import math
+import numpy
+from matplotlib.pyplot import *
+
+class PenduleDouble2:
+    def __init__(self,l2,l3,m2,m3,J2,J3):
+        self.a11 = m2*l2**2/4+m3*l2**2+J2
+        self.a22 = m2*l2**2/4+J3
+        self.d = self.a11*self.a22
+        self.u = 0.5*m3*l2*l3
+        self.v = m2*l2*0.5+m3*l2
+        self.w = m3*l3*0.5
+        self.theta2 = 0.0
+        self.theta3 = 0.0
+        self.dtheta2 = 0.0
+        self.dtheta3 = 0.0
+        
+    def pas_euler(self,h):
+        self.theta2 += self.dtheta2*h
+        self.theta3 += self.dtheta3*h
+        sin2 = math.sin(self.theta2)
+        cos2 = math.cos(self.theta2)
+        sin3 = math.sin(self.theta3)
+        cos3 = math.cos(self.theta3)
+        a12 = self.u*(sin2*sin3+cos2*cos3)
+        det = self.d-a12**2
+        b1 = self.u*(cos2*sin3-sin2*cos3)*self.dtheta3**2-self.v*sin2
+        b2 = self.u*(sin2*cos3-cos2*sin3)*self.dtheta2**2-self.w*sin3
+        self.dtheta2 += (self.a22*b1-a12*b2)/det*h
+        self.dtheta3 += (self.a11*b2-a12*b1)/det*h
+        
+    def euler(self,T,Yi,h):
+        Y = Yi
+        t = 0.0
+        liste_y = [Yi]
+        liste_t = [t]
+        self.theta2 = Yi[0]
+        self.dtheta2 = Yi[1]
+        self.theta3 = Yi[2]
+        self.dtheta3 = Yi[3]
+        while t < T:
+            self.pas_euler(h)
+            t += h
+            liste_y.append([self.theta2,self.dtheta2,self.theta3,self.dtheta3])
+            liste_t.append(t)
+        return (numpy.array(liste_t),numpy.array(liste_y))   
+            
+pendule = PenduleDouble2(1.0,1.0,1.0,1.0,1.0,1.0)
+Yi = [1.0,0.0,0.0,0.0]
+(t,y) = pendule.euler(50,Yi,1e-3)
+
+figure()
+plot(t,y[:,0],label="theta2")
+plot(t,y[:,2],label="theta3")
+legend(loc="upper right")
+xlabel("t")
+grid()
+
+Yi = [3.0,0.0,2.0,0.0]
+(t,y) = pendule.euler(100,Yi,1e-3)
+figure()
+plot(t,y[:,0],label="theta2")
+plot(t,y[:,2],label="theta3")
+legend(loc="upper right")
+xlabel("t")
+grid()
+show()
+print("fin du code")

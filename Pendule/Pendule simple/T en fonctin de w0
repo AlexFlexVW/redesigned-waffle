@@ -1,0 +1,126 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+
+# Paramètres numériques
+dt = 0.001        # très petit pas pour limiter l'instabilité
+n = 10000         # nombre d'itérations
+
+def calcul_T_fonction_w0(w0_values, theta0=0.001, dt=0.001, n=10000):
+    """
+    Calcule la période T en fonction de w0 (pulsation)
+    
+    Paramètres:
+    -----------
+    w0_values : array ou float
+        Valeurs de pulsation w0
+    theta0 : float
+        Angle initial (en radians)
+    dt : float
+        Pas de temps pour la simulation
+    n : int
+        Nombre d'itérations
+    
+    Retour:
+    -------
+    w0_values : array
+        Valeurs de w0
+    T_values : array
+        Période correspondante pour chaque w0
+    """
+    
+    # Convertir w0_values en array si nécessaire
+    if isinstance(w0_values, (int, float)):
+        w0_values = np.array([w0_values])
+    else:
+        w0_values = np.array(w0_values)
+    
+    T_values = []
+    
+    for w0 in w0_values:
+        # Stockage
+        theta = np.zeros(n)
+        omega = np.zeros(n)
+        t = np.zeros(n)
+        T_liste = []
+        
+        # Conditions initiales
+        theta[0] = theta0
+        omega[0] = 0.0
+        t_max = 0
+        
+        # Méthode d'Euler
+        for i in range(n-1):
+            omega[i+1] = omega[i] - w0**2 * np.sin(theta[i]) * dt
+            theta[i+1] = theta[i] + omega[i+1] * dt
+            t[i+1] = t[i] + dt
+        
+        # Calcul de T avec des max locaux
+        for i in range(1, n-1):
+            if theta[i-1] < theta[i] and theta[i] > theta[i+1]:  # max locaux
+                T_liste.append(t[i] - t_max)
+                t_max = t[i]
+        
+        # Moyenne des périodes détectées
+        if len(T_liste) > 0:
+            T_values.append(np.mean(T_liste[1:]))  # On ignore la première (incomplète)
+        else:
+            T_values.append(np.nan)
+    
+    return w0_values, np.array(T_values)
+
+
+def plot_T_vs_w0(w0_min=1, w0_max=20, nb_points=50, theta0=0.001):
+    """
+    Trace un graphique de T en fonction de w0
+    
+    Paramètres:
+    -----------
+    w0_min : float
+        Valeur minimale de w0
+    w0_max : float
+        Valeur maximale de w0
+    nb_points : int
+        Nombre de points à calculer
+    theta0 : float
+        Angle initial (en radians)
+    """
+    
+    # Générer les valeurs de w0
+    w0_values = np.linspace(w0_min, w0_max, nb_points)
+    
+    # Calculer T pour chaque w0
+    w0_vals, T_vals = calcul_T_fonction_w0(w0_values, theta0=theta0)
+    
+    # Calcul de T0 théorique : T0 = 2π/w0
+    T0_theo = 2*np.pi / w0_vals
+    
+    # Affichage
+    plt.figure(figsize=(12, 6))
+    plt.plot(w0_vals, T_vals, 'o-', label="T numérique", linewidth=2, markersize=5)
+    plt.plot(w0_vals, T0_theo, '--', label="T analytique (T₀ = 2π/w₀)", linewidth=2)
+    
+    plt.xlabel("Pulsation w₀ (rad/s)", fontsize=12)
+    plt.ylabel("Période T (s)", fontsize=12)
+    plt.title("Période T en fonction de la pulsation w₀", fontsize=14)
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+
+# Exécution
+if __name__ == "__main__":
+    # Tracer le graphique avec w0 allant de 1 à 20 rad/s
+    plot_T_vs_w0(w0_min=1, w0_max=20, nb_points=50, theta0=0.001)
+    
+    # Afficher quelques valeurs
+    w0_test = np.array([5, 10, 15])
+    w0_vals, T_vals = calcul_T_fonction_w0(w0_test, theta0=0.001)
+    print("\nValeurs calculées:")
+    for w0, T in zip(w0_vals, T_vals):
+        T0 = 2*np.pi/w0
+        print(f"w₀ = {w0:.2f} rad/s → T = {T:.4f} s (T₀ = {T0:.4f} s)")
