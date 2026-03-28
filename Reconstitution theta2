@@ -1,0 +1,61 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+# ─── 1. LECTURE DU FICHIER CSV ───────────────────────────────────────────────
+df = pd.read_csv('C:/Users/vanwa/OneDrive/Prépa/TIPE/WitMotion/WitMotion New Software/WitMotion(V2024.12.27.0)/Record/2025-12-27/11-25-08-366/pd_90°.csv')
+# Nettoyage des noms de colonnes (espaces en tête/fin)
+df.columns = df.columns.str.strip()
+df['Device name'] = df['Device name'].str.strip()
+
+# Conversion du temps (format HH:MM:SS.mmm)
+df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S.%f')
+t0 = df['Time'].min()
+df['t_s'] = (df['Time'] - t0).dt.total_seconds()
+
+# ─── 2. SÉPARATION PAR CAPTEUR ───────────────────────────────────────────────
+MAC_1 = 'c7:d4:f9:38:d0:64'   # pendule 1 → θ₁
+MAC_2 = 'f1:f5:41:fe:62:93'   # pendule 2 → θ₂
+
+df1 = df[df['Device name'] == MAC_1].copy().reset_index(drop=True)
+df2 = df[df['Device name'] == MAC_2].copy().reset_index(drop=True)
+
+# ─── 3. EXTRACTION DES ANGLES ────────────────────────────────────────────────
+# θ₁ : Angle X directement (capteur 1 bien orienté)
+t1     = df1['t_s'].values
+theta1 = np.radians(df1['Angle X(°)'].values)
+
+# θ₂ : Angle X du capteur 2, corrigé de l'offset initial (~-90°)
+t2         = df2['t_s'].values
+angle_x2   = df2['Angle X(°)'].values
+offset2    = angle_x2[0]                          # valeur au repos (~-90°)
+theta2     = np.radians(angle_x2 - offset2)       # centré autour de 0
+
+# ─── 4. VISUALISATION ────────────────────────────────────────────────────────
+fig, axes = plt.subplots(2, 1, figsize=(12, 7), sharex=True)
+
+axes[0].plot(t1, theta1, color='steelblue', lw=1.2, label='θ₁ (capteur 1 — Angle X)')
+axes[0].axhline(0, color='gray', lw=0.5, linestyle='--')
+axes[0].set_ylabel('θ₁ (rad)')
+axes[0].legend(); axes[0].grid(alpha=0.4)
+axes[0].set_title('Angles pendule double — données CSV')
+
+axes[1].plot(t2, theta2, color='tomato', lw=1.2,
+             label=f'θ₂ (capteur 2 — Angle X − {offset2:.1f}°)')
+axes[1].axhline(0, color='gray', lw=0.5, linestyle='--')
+axes[1].set_ylabel('θ₂ (rad)')
+axes[1].set_xlabel('t (s)')
+axes[1].legend(); axes[1].grid(alpha=0.4)
+
+plt.tight_layout()
+plt.savefig('angles_pendule.png', dpi=150)
+plt.show()
+
+# ─── 5. VÉRIFICATION RAPIDE ──────────────────────────────────────────────────
+print(f"Capteur 1 : {len(df1)} points | θ₁ ∈ [{np.degrees(theta1.min()):.1f}°, {np.degrees(theta1.max()):.1f}°]")
+print(f"Capteur 2 : {len(df2)} points | Angle X brut ∈ [{angle_x2.min():.1f}°, {angle_x2.max():.1f}°]")
+print(f"Offset appliqué : {offset2:.1f}°  →  θ₂ ∈ [{np.degrees(theta2.min()):.1f}°, {np.degrees(theta2.max()):.1f}°]")
+
+
+## Ce que fait la correction
+
+#Angle X brut capteur 2 ≈ -90°  →  θ₂ = AngleX - (-90°) ≈ 0° au repos ✓
