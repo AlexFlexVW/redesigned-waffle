@@ -1,0 +1,48 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+df = pd.read_csv('C:/Users/vanwa/OneDrive/Prépa/TIPE/WitMotion/WitMotion New Software/WitMotion(V2024.12.27.0)/Record/2025-12-27/11-25-08-366/pd_90°.csv')
+
+df.columns = df.columns.str.strip()
+df['Device name'] = df['Device name'].str.strip()
+df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S.%f')
+df['t_s'] = (df['Time'] - df['Time'].min()).dt.total_seconds()
+
+df2 = df[df['Device name'] == 'f1:f5:41:fe:62:93'].copy().reset_index(drop=True)
+
+ax  = df2['Angle X(°)'].values
+ay  = df2['Angle Y(°)'].values
+az  = df2['Angle Z(°)'].values
+t2  = df2['t_s'].values
+
+# ─── Centrage autour du repos ─────────────────────────────────────────────
+ax0 = ax - ax[0]
+ay0 = ay - ay[0]
+az0 = az - az[0]
+
+# ─── Visualisation des 3 axes ────────────────────────────────────────────
+fig, axes = plt.subplots(3, 1, figsize=(12, 8), sharex=True)
+
+for i, (data, label, color) in enumerate(zip(
+        [ax0, ay0, az0],
+        ['Angle X − X₀', 'Angle Y − Y₀', 'Angle Z − Z₀'],
+        ['steelblue', 'tomato', 'seagreen'])):
+    axes[i].plot(t2, data, color=color, lw=1.0, label=label)
+    axes[i].axhline(0, color='gray', lw=0.5, linestyle='--')
+    axes[i].set_ylabel('° ')
+    axes[i].legend(loc='upper right')
+    axes[i].grid(alpha=0.4)
+    # Amplitude max pour identifier l'axe dominant
+    print(f"{label} : amplitude max = {np.max(np.abs(data)):.2f}°, std = {np.std(data):.2f}°")
+
+axes[2].set_xlabel('t (s)')
+plt.suptitle('Capteur 2 — décomposition des axes')
+plt.tight_layout()
+plt.show()
+'''
+### Ce que tu cherches dans le print :
+Angle X − X₀ : amplitude max =  2.3°,  std = 0.8°   ← petit → axe mineur
+Angle Y − Y₀ : amplitude max = 18.7°,  std = 6.2°   ← grand → axe dominant ✓
+Angle Z − Z₀ : amplitude max =  0.9°,  std = 0.3°   ← négligeable
+'''

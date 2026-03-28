@@ -1,0 +1,117 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+
+# Paramètres numériques
+dt = 0.001        # très petit pas pour limiter l'instabilité
+n = 10000         # nombre d'itérations
+
+
+def calcul_difference_T0_vs_dt(w0=6.26, theta0=0.001, n=10000, dt_min=0.0001, dt_max=0.01, nb_points=50):
+    """
+    Calcule la différence T0 - T en fonction de dt
+    
+    Paramètres:
+    -----------
+    w0 : float
+        Pulsation fixe
+    theta0 : float
+        Angle initial (en radians)
+    n : int
+        Nombre d'itérations
+    dt_min : float
+        Pas de temps minimum
+    dt_max : float
+        Pas de temps maximum
+    nb_points : int
+        Nombre de points à calculer
+    
+    Retour:
+    -------
+    dt_values : array
+        Valeurs de dt
+    difference : array
+        Différence T0 - T pour chaque dt
+    """
+    
+    dt_values = np.logspace(np.log10(dt_min), np.log10(dt_max), nb_points)
+    differences = []
+    
+    for dt in dt_values:
+        # Adapter le nombre d'itérations selon dt pour garder le temps total similaire
+        n_iter = int(n * 0.001 / dt)  # Temps total d'environ 10 secondes
+        
+        # Stockage
+        theta = np.zeros(n_iter)
+        omega = np.zeros(n_iter)
+        t = np.zeros(n_iter)
+        T_liste = []
+        
+        # Conditions initiales
+        theta[0] = theta0
+        omega[0] = 0.0
+        t_max = 0
+        
+        # Méthode d'Euler
+        for i in range(n_iter-1):
+            omega[i+1] = omega[i] - w0**2 * np.sin(theta[i]) * dt
+            theta[i+1] = theta[i] + omega[i+1] * dt
+            t[i+1] = t[i] + dt
+        
+        # Calcul de T avec des max locaux
+        for i in range(1, n_iter-1):
+            if theta[i-1] < theta[i] and theta[i] > theta[i+1]:
+                T_liste.append(t[i] - t_max)
+                t_max = t[i]
+        
+        # Moyenne des périodes détectées
+        if len(T_liste) > 1:
+            T_numeric = np.mean(T_liste[1:])
+        else:
+            T_numeric = np.nan
+        
+        # T0 théorique
+        T0 = 2*np.pi/w0
+        
+        # Différence
+        difference = T0 - T_numeric
+        differences.append(difference)
+    
+    return dt_values, np.array(differences)
+
+
+def plot_difference_vs_dt(w0=6.26, theta0=0.001):
+    """
+    Trace un graphique de (T0 - T) en fonction de dt
+    
+    Paramètres:
+    -----------
+    w0 : float
+        Pulsation (par défaut ≈ sqrt(g/l))
+    theta0 : float
+        Angle initial (en radians)
+    """
+    
+    dt_vals, diff_vals = calcul_difference_T0_vs_dt(w0=w0, theta0=theta0, dt_min=0.0001, dt_max=0.01, nb_points=30)
+    
+    # Affichage
+    plt.figure(figsize=(12, 6))
+    plt.plot(dt_vals, diff_vals, 'o-', label=f"T₀ - T (w₀ = {w0:.2f} rad/s)", linewidth=2, markersize=6,color='red')
+    
+    plt.xlabel("Pas de temps dt (s)", fontsize=12)
+    plt.ylabel("Différence T₀ - T (s)", fontsize=12)
+    plt.title("Erreur numérique: T₀ - T en fonction de dt", fontsize=14)
+    plt.xscale('log')
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+
+# Exécution
+if __name__ == "__main__":
+    # Tracer la différence T0 - T en fonction de dt
+    plot_difference_vs_dt(w0=6.26, theta0=0.001)
