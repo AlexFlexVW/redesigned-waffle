@@ -13,10 +13,7 @@ n = 100000
 '''theta1_0 = 1.0  
 theta2_0 = 1.5 
 '''
-<<<<<<< HEAD
 theta0 = [np.pi/2,np.pi/2]
-=======
->>>>>>> bbf77e35e2290593f02564fa8fc18532e4e694ad
 omega0 = [0.0,0.0]
 
 # Stockage : Tableaux numpy initialisés à 0
@@ -76,7 +73,6 @@ def theta(theta0):
 
 # --- Calcul del'écart entre 2 trajectoires---
 epsilon=0.1
-<<<<<<< HEAD
 """def delta(x,y):
     th,omega=theta(theta0)
     for i in range(n-1):
@@ -84,15 +80,6 @@ epsilon=0.1
 
 
 th,omega=theta(theta0)
-=======
-def delta(x,y):
-    th,omega=delta(theta0)
-    for i in range(n-1):
-    delta[i]=np.linalg.norm()
-
-
-
->>>>>>> bbf77e35e2290593f02564fa8fc18532e4e694ad
 # --- Calcul Correct de l'Énergie ---
 E_kinetic = np.zeros(n)
 E_potential = np.zeros(n)
@@ -100,11 +87,7 @@ E_total = np.zeros(n)
 
 # On normalise par m*l^2
 for i in range(n):
-<<<<<<< HEAD
     th1, th2 = th[i, 0], th[i, 1]
-=======
-    th1, th2 = theta[i, 0], theta[i, 1]
->>>>>>> bbf77e35e2290593f02564fa8fc18532e4e694ad
     w1, w2 = omega[i, 0], omega[i, 1]
     delta = th1 - th2
     
