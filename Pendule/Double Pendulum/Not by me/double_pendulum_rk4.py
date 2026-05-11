@@ -72,7 +72,6 @@ def integrate(state0, t, method='rk4'):
         sol = solve_ivp(derivs, (t[0], t[-1]), state0, t_eval=t, rtol=1e-9, atol=1e-9)
         print("scipy activé")
         return sol.y.T
-        
     else:
         return rk4_integrate(derivs, state0, t)
 

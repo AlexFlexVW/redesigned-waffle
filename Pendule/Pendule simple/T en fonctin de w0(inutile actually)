@@ -39,6 +39,7 @@ def calcul_T_fonction_w0(w0_values, theta0=0.001, dt=0.001, n=10000):
         w0_values = np.array(w0_values)
     
     T_values = []
+    T_theo_values = []
     
     for w0 in w0_values:
         # Stockage
@@ -69,8 +70,17 @@ def calcul_T_fonction_w0(w0_values, theta0=0.001, dt=0.001, n=10000):
             T_values.append(np.mean(T_liste[1:]))  # On ignore la première (incomplète)
         else:
             T_values.append(np.nan)
-    
-    return w0_values, np.array(T_values)
+
+        #Calcul de la période théorique 
+        T0 = 2*np.pi/w0
+        # On évite x = theta0
+        eps = 1e-9
+        x = np.linspace(0, theta0 - eps, 1000)#plus on augmente n plus on rapproche la solution théorique de la réalité
+        f = 1.0/np.sqrt(2*(np.cos(x) - np.cos(theta0)))
+        integrale = np.trapezoid(f, x)
+        T_theo = (2*T0/np.pi)*integrale
+        T_theo_values.append(T_theo)
+    return w0_values, np.array(T_values), np.array(T_theo_values)
 
 
 def plot_T_vs_w0(w0_min=1, w0_max=20, nb_points=50, theta0=0.001):
@@ -93,15 +103,16 @@ def plot_T_vs_w0(w0_min=1, w0_max=20, nb_points=50, theta0=0.001):
     w0_values = np.linspace(w0_min, w0_max, nb_points)
     
     # Calculer T pour chaque w0
-    w0_vals, T_vals = calcul_T_fonction_w0(w0_values, theta0=theta0)
-    
-    # Calcul de T0 théorique : T0 = 2π/w0
-    T0_theo = 2*np.pi / w0_vals
+    w0_vals, T_vals, T_theo_vals = calcul_T_fonction_w0(w0_values, theta0=theta0)
     
     # Affichage
     plt.figure(figsize=(12, 6))
     plt.plot(w0_vals, T_vals, 'o-', label="T numérique", linewidth=2, markersize=5)
-    plt.plot(w0_vals, T0_theo, '--', label="T analytique (T₀ = 2π/w₀)", linewidth=2)
+    plt.plot(w0_vals, T_theo_vals, '--', label="T théorique (avec intégrale elliptique)", linewidth=2)
+    
+    # Calcul de T0 simple : T0 = 2π/w0
+    T0_simple = 2*np.pi / w0_vals
+    plt.plot(w0_vals, T0_simple, '--', label="T₀ = 2π/w₀ (simple)", linewidth=2, color='red', alpha=0.5)
     
     plt.xlabel("Pulsation w₀ (rad/s)", fontsize=12)
     plt.ylabel("Période T (s)", fontsize=12)
@@ -112,6 +123,36 @@ def plot_T_vs_w0(w0_min=1, w0_max=20, nb_points=50, theta0=0.001):
     plt.show()
 
 
+def plot_T0_minus_Ttheo_vs_w0(w0_min=1, w0_max=20, nb_points=50, theta0=0.001, savepath=None):
+    """
+    Trace la différence T0_simple - T_théo (où T0_simple = 2π/w0)
+    en fonction de w0 et sauvegarde la figure si `savepath` est fourni.
+    """
+    # Générer les valeurs de w0
+    w0_values = np.linspace(w0_min, w0_max, nb_points)
+
+    # Calculer les périodes
+    w0_vals, T_vals, T_theo_vals = calcul_T_fonction_w0(w0_values, theta0=theta0)
+
+    # Calcul simple T0 = 2π / w0
+    T0_simple = 2 * np.pi / w0_vals
+
+    # Différence
+    diff = T0_simple - T_theo_vals
+
+    # Tracé
+    plt.figure(figsize=(10, 5))
+    plt.plot(w0_vals, diff, 'o-', color='C2', linewidth=2, markersize=5)
+    plt.xlabel("Pulsation w₀ (rad/s)", fontsize=12)
+    plt.ylabel("T₀ - T_théo (s)", fontsize=12)
+    plt.title("Différence T₀ (2π/w₀) - T_théo en fonction de w₀", fontsize=14)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    if savepath:
+        plt.savefig(savepath, dpi=300)
+    plt.show()
+
+
 # Exécution
 if __name__ == "__main__":
     # Tracer le graphique avec w0 allant de 1 à 20 rad/s
@@ -119,8 +160,8 @@ if __name__ == "__main__":
     
     # Afficher quelques valeurs
     w0_test = np.array([5, 10, 15])
-    w0_vals, T_vals = calcul_T_fonction_w0(w0_test, theta0=0.001)
+    w0_vals, T_vals, T_theo_vals = calcul_T_fonction_w0(w0_test, theta0=0.001)
     print("\nValeurs calculées:")
-    for w0, T in zip(w0_vals, T_vals):
+    for w0, T, T_theo in zip(w0_vals, T_vals, T_theo_vals):
         T0 = 2*np.pi/w0
-        print(f"w₀ = {w0:.2f} rad/s → T = {T:.4f} s (T₀ = {T0:.4f} s)")
+        print(f"w₀ = {w0:.2f} rad/s → T = {T:.4f} s (T₀ = {T0:.4f} s, T_théo = {T_theo:.4f} s)")
