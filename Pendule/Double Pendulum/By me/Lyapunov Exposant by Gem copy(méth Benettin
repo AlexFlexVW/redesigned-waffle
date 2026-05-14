@@ -1,0 +1,115 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- Paramètres Physiques et Numériques ---
+g = 9.81 
+l = 0.25 
+dt = 0.0001 
+n = 100000 
+epsilon = 1e-6  # Perturbation initiale
+
+def ddtheta(th1, th2, w1, w2):
+    """Calcule les accélérations du pendule double."""
+    delta = th1 - th2
+    sin_d, cos_d = np.sin(delta), np.cos(delta)
+    det = 2 - cos_d**2 
+    
+    b1 = -(w2**2) * sin_d - 2 * (g/l) * np.sin(th1) 
+    b2 = (w1**2) * sin_d - (g/l) * np.sin(th2) 
+    
+    d2th1 = (b1 - cos_d * b2) / det 
+    d2th2 = (2 * b2 - cos_d * b1) / det 
+    return d2th1, d2th2
+
+def calcul_lyapunov(theta_init, omega_init):
+    # Initialisation des 4 tableaux (taille n x 2) comme demandé
+    theta1 = np.zeros((n, 2)) 
+    omega1 = np.zeros((n, 2))
+    theta2 = np.zeros((n, 2)) 
+    omega2 = np.zeros((n, 2))
+
+    # Conditions initiales
+    theta1[0] = theta_init
+    omega1[0] = omega_init
+    # Trajectoire 2 décalée de epsilon
+    theta2[0] = [theta_init[0] + epsilon, theta_init[1]]
+    omega2[0] = omega_init
+
+    lyap_sum = 0
+    lambda_t = np.zeros(n)
+
+    for i in range(n-1):
+        # 1. Évolution Trajectoire 1 (Euler Symplectique)
+        d2th1_1, d2th2_1 = ddtheta(theta1[i,0], theta1[i,1], omega1[i,0], omega1[i,1])
+        omega1[i+1,0] = omega1[i,0] + d2th1_1 * dt 
+        omega1[i+1,1] = omega1[i,1] + d2th2_1 * dt 
+        theta1[i+1,0] = theta1[i,0] + omega1[i+1,0] * dt 
+        theta1[i+1,1] = theta1[i,1] + omega1[i+1,1] * dt 
+
+        # 2. Évolution Trajectoire 2
+        d2th1_2, d2th2_2 = ddtheta(theta2[i,0], theta2[i,1], omega2[i,0], omega2[i,1])
+        omega2[i+1,0] = omega2[i,0] + d2th1_2 * dt
+        omega2[i+1,1] = omega2[i,1] + d2th2_2 * dt
+        theta2[i+1,0] = theta2[i,0] + omega2[i+1,0] * dt
+        theta2[i+1,1] = theta2[i,1] + omega2[i+1,1] * dt
+
+        # 3. Calcul de la distance 4D et Renormalisation (Benettin)
+        diff_th = (theta2[i+1] - theta1[i+1] + np.pi) % (2 * np.pi) - np.pi
+        diff_om = omega2[i+1] - omega1[i+1]
+        dist = np.sqrt(np.sum(diff_th**2) + np.sum(diff_om**2))
+
+        # Accumulation du taux de séparation
+        lyap_sum += np.log(dist / epsilon)
+        
+        # Réinitialisation de la trajectoire 2 à la distance epsilon
+        theta2[i+1] = theta1[i+1] + (epsilon / dist) * diff_th
+        omega2[i+1] = omega1[i+1] + (epsilon / dist) * diff_om
+        
+        lambda_t[i+1] = lyap_sum / ((i+1) * dt)
+
+    return lambda_t
+
+# ==========================================
+# AFFICHAGES GRAPHIQUES
+# ==========================================
+
+# --- Graphique 1 : λ(t) pour une condition initiale fixe ---
+print("Calcul graphique 1 : λ(t) pour theta = (pi/2, pi/2)...")
+iterations = np.arange(n)
+theta0=[np.pi/2, np.pi/2]
+omega0=[0.0, 0.0]
+mle_res = calcul_lyapunov(theta0,omega0 )
+
+plt.figure(figsize=(10, 5))
+plt.plot(iterations, mle_res, linewidth=0.5)
+plt.title("Convergence de l'exposant de Lyapunov (Pendule Double)")
+plt.xlabel("Itérations")
+plt.ylabel("Exposant de Lyapunov : λ")
+plt.axhline(y=mle_res[-1], color='r', linestyle='--', label=f':MLE {mle_res[-1]:.4f}')
+
+plt.grid(True, alpha=0.3)
+plt.legend()
+plt.show()
+
+# --- Graphique 2 : λ final en fonction de θ1_0 (en gardant θ2_0 = pi/2) ---
+print("Calcul graphique 2 : Lyapunov exponent en fonction de θ1_0 (cela peut prendre quelques secondes)...")
+theta1_values = np.linspace(0.1, np.pi, 25) # 25 valeurs pour ne pas que ce soit trop long à calculer
+lyapunov_exponents = np.zeros_like(theta1_values)
+
+for idx, th1_val in enumerate(theta1_values):
+    lyap_exp = calcul_lyapunov(theta0,omega0)[-1]
+    lyapunov_exponents[idx] = lyap_exp
+    
+    # Barre de progression simple
+    if (idx + 1) % 5 == 0:
+        print(f"  Progression: {idx + 1}/{len(theta1_values)}")
+
+fig2, ax2 = plt.subplots(figsize=(10, 6))
+ax2.plot(theta1_values, lyapunov_exponents, 'o-', linewidth=2, markersize=6, color='purple')
+ax2.set_xlabel("Angle initial θ1_0 (rad) [θ2_0 fixé à pi/2]")
+ax2.set_ylabel("Exposant de Lyapunov λ")
+ax2.set_title("Exposant de Lyapunov final en fonction de l'angle initial")
+ax2.grid(True, alpha=0.3)
+plt.show()
+
+print("\nSimulations terminées !")

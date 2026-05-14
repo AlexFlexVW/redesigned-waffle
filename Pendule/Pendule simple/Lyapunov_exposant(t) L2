@@ -7,8 +7,8 @@ l = 0.25          # longueur du pendule (m)
 w0 = np.sqrt(g/l) # pulsation
 
 # Paramètres numériques
-dt = 0.0001       # très petit pas
-n = 50000         # nombre d'itérations
+dt = 0.00005       # très petit pas
+n = 100000         # nombre d'itérations
 
 # Conditions initiales
 omega0 = 0.0
@@ -49,7 +49,7 @@ def mle_single(theta0, omega0, n_iter):
         theta2[i+1] = theta2[i] + omega2[i+1] * dt
         
         # Divergence
-        delta_i = abs(theta2[i+1] - theta1[i+1])
+        delta_i = np.sqrt((theta2[i+1] - theta1[i+1])**2 + (omega2[i+1] - omega1[i+1])**2)
         
         if delta_i > 0:
             limite = np.log(delta_i / epsilon)
@@ -71,7 +71,7 @@ fig, ax = plt.subplots(figsize=(10, 8))
 # Dessin sur le premier graphique (ax1)
 ax.plot(iterations, lambda_array, linewidth=0.5)
 ax.set_xlabel("Itération i")
-ax.set_ylabel("λ (version limite)")
+ax.set_ylabel("Exposant de Lyapunov : λ (version limite)")
 ax.set_title("Exposant de Lyapunov - Version Limite (Classique)")
 ax.grid(True, alpha=0.3)
 ax.axhline(y=lyapunov_exponent, color='r', linestyle='--', label=f'Valeur finale: {lyapunov_exponent:.6f}')
