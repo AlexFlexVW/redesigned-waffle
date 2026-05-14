@@ -9,7 +9,7 @@ l = 0.25
 dt = 0.0001       
 n = 100000        
 
-# Conditions initiales (en radians) np.pi / 2   # 90°
+# Conditions initiales (en radians)np.pi / 2   # 90°
 theta1_0 = 1
 theta2_0 = 1.5
 omega1_0 = 0.0
@@ -63,38 +63,42 @@ for i in range(n-1):
     
     t[i+1] = t[i] + dt
 
-# --- Calcul Correct de l'Énergie ---
-E_kinetic = np.zeros(n)
+def energie(theta1, theta2, omega1, omega2, g, l):
+    """
+    Retourne l'énergie totale adimensionnelle (divisée par mgl).
+    T* + V* doivent être constants si le système est conservatif.
+    """
+    delta = theta1 - theta2
+    
+    # Énergie cinétique adimensionnelle : T / (mgl)
+    # T = 0.5 * m * l^2 * (2w1^2 + w2^2 + 2*w1*w2*cos(delta))
+    # T / (mgl) = (l / 2g) * (...)
+    T_star = (l / (2 * g)) * (2 * omega1**2 + omega2**2 
+                               + 2 * omega1 * omega2 * np.cos(delta))
+    
+    # Énergie potentielle adimensionnelle : V / (mgl)
+    # V = -mgl * (2*cos(theta1) + cos(theta2))
+    # V / (mgl) = -(2*cos(theta1) + cos(theta2))
+    V_star = -(2 * np.cos(theta1) + np.cos(theta2))
+    
+    return T_star, V_star, T_star + V_star
+
+# Remplacement de ta boucle de calcul d'énergie
+E_kinetic   = np.zeros(n)
 E_potential = np.zeros(n)
-E_total = np.zeros(n)
+E_total     = np.zeros(n)
 
-# On normalise par m*l^2
 for i in range(n):
-    th1, th2 = theta[i, 0], theta[i, 1]
-    w1, w2 = omega[i, 0], omega[i, 1]
-    delta = th1 - th2
+    E_kinetic[i], E_potential[i], E_total[i] = energie(
+        theta[i, 0], theta[i, 1],
+        omega[i, 0], omega[i, 1],
+        g, l
+    )
     
-    # Energie Cinétique T = 0.5 * m * l^2 * (2*w1^2 + w2^2 + 2*w1*w2*cos(delta))
-    # ATTENTION : facteur 2 sur w1^2 car la masse 1 porte la masse 2
-    term_k = 2 * w1**2 + w2**2 + 2 * w1 * w2 * np.cos(delta)
-    E_kinetic[i] = 0.5 * term_k # (facteur m*l^2 implicite = 1)
-    
-    # Energie Potentielle V = -m*g*l * (2*cos(th1) + cos(th2))
-    # ATTENTION : facteur 2 sur cos(th1) car masse 1 soutient masse 2
-    term_p = -(2 * np.cos(th1) + np.cos(th2))
-    E_potential[i] = term_p * (g/l) # ajustement dimensionnel si on veut tout en rad/s^2 ou J
-    
-    # Pour garder cohérence avec ton code précédent qui normalisait par mgl :
-    # K_norm = K / (mgl) = (0.5 m l^2 term_k) / (mgl) = (l/2g) * term_k
-    E_kinetic[i] = (l / (2*g)) * term_k
-    E_potential[i] = term_p # car divisé par mgl, il reste juste les cos
-    
-    E_total[i] = E_kinetic[i] + E_potential[i]
-
 # Affichage
 plt.figure(figsize=(10, 8))
 
-plt.subplot(2, 1, 1)
+plt.subplot(2, 1, 1)#nrows,ncols,index
 plt.plot(t, theta[:, 0], label=r'$\theta_1$')
 plt.plot(t, theta[:, 1], label=r'$\theta_2$')
 plt.ylabel('Angle (rad)')
@@ -102,11 +106,11 @@ plt.title(f'Double Pendule (Euler Symplectique) Angle initial: ({theta1_0:.3f}, 
 plt.legend()
 plt.grid(True)
 
-plt.subplot(2, 1, 2)
+plt.subplot(2, 1, 2)#nrows,ncols,index
 plt.plot(t, E_total, label='Énergie Totale', color='red')
 plt.plot(t, E_kinetic, label='Cinétique', alpha=0.5)
 plt.plot(t, E_potential, label='Potentielle', alpha=0.5)
-plt.ylabel('Énergie (en J)')
+plt.ylabel('Énergie adimensionnelle E / (mgl)')
 plt.xlabel('Temps (en s)')
 plt.legend()
 plt.grid(True)

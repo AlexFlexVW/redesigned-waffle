@@ -35,7 +35,9 @@ def mle_single(theta0, omega0, n_iter):
     theta2[0] = theta0 + epsilon #epsilon = l'écart initinial
     omega2[0] = omega0
     
-    lambda_array = np.zeros(n_iter)
+    lambda_array_l = np.zeros(n_iter)
+    lambda_array_s = np.zeros(n_iter)
+
     somme = 0.0
     
     # Méthode d'Euler pour deux trajectoires proches
@@ -52,38 +54,56 @@ def mle_single(theta0, omega0, n_iter):
         delta_i = abs(theta2[i+1] - theta1[i+1])
         
         if delta_i > 0:
+            limite = np.log(delta_i / epsilon)
             somme += np.log(delta_i / epsilon)
-            lambda_array[i+1] = somme / ((i + 1) * dt)
+            lambda_array_l[i+1] = limite / ((i + 1) * dt)
+            lambda_array_s[i+1] = somme / ((i + 1) * dt)
     
-    lyapunov_exponent = somme / (n_iter * dt) 
+    lyapunov_exponent_l = limite / (n_iter * dt) # Limite
+    lyapunov_exponent_s = somme / (n_iter * dt) # Somme
     
-    return lambda_array, lyapunov_exponent
+    return lambda_array_l,lambda_array_s, lyapunov_exponent_l,lyapunov_exponent_s
 
 
-# Graphique 1: Lambda en fonction de i pour theta0 initial
+# --- Remplacement de la section Graphique 1 ---
 print("Calcul graphique 1: lambda(i) pour theta0 = 0.5 rad...")
-lambda_vs_i, exp1 = mle_single(0.5, omega0, n)
+lambda_array_l, lambda_array_s, lyapunov_exponent_l, lyapunov_exponent_s = mle_single(0.5, omega0, n)
 iterations = np.arange(n)
 
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.plot(iterations, lambda_vs_i, linewidth=0.5)
-ax.set_xlabel("Itération i")
-ax.set_ylabel("Exposant de Lyapunov λ")
-ax.set_title(f"Exposant de Lyapunov en fonction des itérations (θ₀ = 0.5 rad)")
-ax.grid(True, alpha=0.3)
-ax.axhline(y=exp1, color='r', linestyle='--', label=f'Valeur finale: {exp1:.6f}')
-ax.legend()
+# CRÉATION PROPRE : On demande directement 2 lignes, 1 colonne, et on récupère ax1 et ax2
+fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(10, 8))
+
+# Dessin sur le premier graphique (ax1)
+ax1.plot(iterations, lambda_array_l, linewidth=0.5)
+ax1.set_xlabel("Itération i")
+ax1.set_ylabel("λ (version limite)")
+ax1.set_title("Exposant de Lyapunov - Version Limite (Classique)")
+ax1.grid(True, alpha=0.3)
+ax1.axhline(y=lyapunov_exponent_l, color='r', linestyle='--', label=f'Valeur finale: {lyapunov_exponent_l:.6f}')
+ax1.legend()
+
+# Dessin sur le second graphique (ax2)
+ax2.plot(iterations, lambda_array_s, linewidth=0.5, color='orange')
+ax2.set_xlabel("Itération i")
+ax2.set_ylabel("λ (version somme)")
+ax2.set_title("Exposant de Lyapunov - Version Somme (Incorrecte)")
+ax2.grid(True, alpha=0.3)
+ax2.axhline(y=lyapunov_exponent_s, color='r', linestyle='--', label=f'Valeur finale: {lyapunov_exponent_s:.6f}')
+ax2.legend()
+
 plt.tight_layout()
 plt.show()
 
-# Graphique 2: Exposant de Lyapunov en fonction de theta0
+
+# --- Remplacement de la section Graphique 2 ---
 print("Calcul graphique 2: Lyapunov exponent en fonction de θ₀...")
-theta0_values = np.linspace(0.1, np.pi, 30)
-lyapunov_exponents = np.zeros_like(theta0_values)
+theta0_values = np.linspace(0.1, np.pi/2, 30)
+lyapunov_exponents = np.zeros_like(theta0_values)#tableau de 0 au format de theta0_values
 
 for idx, theta0 in enumerate(theta0_values):
-    _, lyap = mle_single(theta0, omega0, n)
-    lyapunov_exponents[idx] = lyap
+    # CORRECTION ICI : La fonction mle_single retourne 4 valeurs, il faut bien les réceptionner
+    _, _, lyap_l, _ = mle_single(theta0, omega0, n)
+    lyapunov_exponents[idx] = lyap_l # On ne garde que la version limite qui est la bonne
     if (idx + 1) % 10 == 0:
         print(f"  Progression: {idx + 1}/{len(theta0_values)}")
 
