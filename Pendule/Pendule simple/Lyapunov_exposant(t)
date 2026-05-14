@@ -32,7 +32,7 @@ def mle_single(theta0, omega0, n_iter):
     # Conditions initiales
     theta1[0] = theta0
     omega1[0] = omega0
-    theta2[0] = theta0 + epsilon
+    theta2[0] = theta0 + epsilon #epsilon = l'écart initinial
     omega2[0] = omega0
     
     lambda_array = np.zeros(n_iter)
