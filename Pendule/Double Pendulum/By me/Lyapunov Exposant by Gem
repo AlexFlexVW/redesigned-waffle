@@ -8,7 +8,7 @@ l = 0.25
 # Paramètres numériques
 dt = 0.0001       
 n = 100000        
-epsilon = 1e-5  # Perturbation initiale très petite
+epsilon = 1e-6  # Perturbation initiale très petite
 
 def ddtheta(theta1, theta2, omega1, omega2):
     """Calcule les accélérations angulaires du pendule double."""
@@ -91,21 +91,21 @@ ax1.grid(True, alpha=0.3)
 ax1.legend()
 plt.show()
 
-# --- Graphique 2 : λ final en fonction de θ1_0 (en gardant θ2_0 = pi/2) ---
-print("Calcul graphique 2 : Lyapunov exponent en fonction de θ1_0 (cela peut prendre quelques secondes)...")
-theta1_values = np.linspace(0.1, np.pi, 25) # 25 valeurs pour ne pas que ce soit trop long à calculer
-lyapunov_exponents = np.zeros_like(theta1_values)
+# --- Graphique 2 : λ final en fonction de θ2_0 (en gardant θ1_0 = pi/2) ---
+print("Calcul graphique 2 : Lyapunov exponent en fonction de θ2_0 (cela peut prendre quelques secondes)...")
+theta2_values = np.linspace(0.1, np.pi, 25) # 25 valeurs pour ne pas que ce soit trop long à calculer
+lyapunov_exponents = np.zeros_like(theta2_values)
 
-for idx, th1_val in enumerate(theta1_values):
-    _, lyap_exp = mle_double_benettin(th1_val, th2_init, 0.0, 0.0, n)
+for idx, th2_val in enumerate(theta2_values):
+    _, lyap_exp = mle_double_benettin(th1_init,  th2_val, 0.0, 0.0, n)
     lyapunov_exponents[idx] = lyap_exp
     
     # Barre de progression simple
     if (idx + 1) % 5 == 0:
-        print(f"  Progression: {idx + 1}/{len(theta1_values)}")
+        print(f"  Progression: {idx + 1}/{len(theta2_values)}")
 
 fig2, ax2 = plt.subplots(figsize=(10, 6))
-ax2.plot(theta1_values, lyapunov_exponents, 'o-', linewidth=2, markersize=6, color='purple')
+ax2.plot(theta2_values, lyapunov_exponents, 'o-', linewidth=2, markersize=6, color='purple')
 ax2.set_xlabel("Angle initial θ1_0 (rad) [θ2_0 fixé à pi/2]")
 ax2.set_ylabel("Exposant de Lyapunov λ")
 ax2.set_title("Exposant de Lyapunov final en fonction de l'angle initial")

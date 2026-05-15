@@ -14,7 +14,7 @@ n = 100000         # nombre d'itérations
 omega0 = 0.0
 
 # Exposant de Lyapunov
-epsilon = 0.001   # perturbation initiale très petite
+epsilon = 1e-6   # perturbation initiale très petite
 
 def mle_single(theta0, omega0, n_iter):
     """
