@@ -1,0 +1,115 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81          
+l = 0.25          
+
+# Paramètres numériques
+dt = 0.0001       
+n = 100000        
+epsilon = 1e-6  # Perturbation initiale très petite
+
+def ddtheta(theta1, theta2, omega1, omega2):
+    """Calcule les accélérations angulaires du pendule double."""
+    delta = theta1 - theta2
+    sin_delta = np.sin(delta)
+    cos_delta = np.cos(delta)
+    
+    det = 2 - cos_delta**2
+    
+    b1 = - (omega2**2) * sin_delta - 2 * (g/l) * np.sin(theta1)
+    b2 = + (omega1**2) * sin_delta - (g/l) * np.sin(theta2)
+    
+    d2theta1 = (b1 - cos_delta * b2) / det
+    d2theta2 = (2 * b2 - cos_delta * b1) / det
+    
+    return d2theta1, d2theta2
+
+def mle_double_benettin(th1_0, th2_0, w1_0, w2_0, n_iter):
+    # Initialisation des trajectoires (on n'a besoin que des états courants)
+    # Ref: [th1, th2, w1, w2] | Pert: [p1, p2, g1, g2]
+    ref = np.array([th1_0, th2_0, w1_0, w2_0])
+    pert = np.array([th1_0 + epsilon, th2_0, w1_0, w2_0])
+    
+    lyap_sum = 0
+    lambda_t = np.zeros(n_iter)
+    
+    for i in range(1, n_iter):
+        # 1. Avancement de la trajectoire de référence
+        d2th1, d2th2 = ddtheta(ref[0], ref[1], ref[2], ref[3])
+        ref[2] += d2th1 * dt # w1
+        ref[3] += d2th2 * dt # w2
+        ref[0] += ref[2] * dt # th1
+        ref[1] += ref[3] * dt # th2
+        
+        # 2. Avancement de la trajectoire perturbée
+        d2p1, d2p2 = ddtheta(pert[0], pert[1], pert[2], pert[3])
+        pert[2] += d2p1 * dt # g1
+        pert[3] += d2p2 * dt # g2
+        pert[0] += pert[2] * dt # p1
+        pert[1] += pert[3] * dt # p2
+        
+        # 3. Calcul de la distance 4D (avec correction modulo pour les angles)
+        diff = pert - ref
+        diff[0] = (diff[0] + np.pi) % (2 * np.pi) - np.pi # Modulo th1
+        diff[1] = (diff[1] + np.pi) % (2 * np.pi) - np.pi # Modulo th2
+        
+        dist = np.linalg.norm(diff)
+        
+        # 4. RENORMALISATION
+        # On accumule le logarithme du ratio d'expansion
+        lyap_sum += np.log(dist / epsilon)
+        
+        # On ramène la trajectoire perturbée à la distance epsilon
+        pert = ref + (epsilon / dist) * diff
+        
+        # Moyenne glissante de l'exposant
+        lambda_t[i] = lyap_sum / (i * dt)
+        
+    return lambda_t, lambda_t[-1]
+
+# ==========================================
+# AFFICHAGES GRAPHIQUES
+# ==========================================
+
+# --- Graphique 1 : λ(t) pour une condition initiale fixe ---
+print("Calcul graphique 1 : λ(t) pour theta = (pi/2, pi/2)...")
+th1_init = np.pi / 2
+th2_init = np.pi / 2
+t_array = np.linspace(0, n*dt, n)
+
+lambda_t, lyap_final = mle_double_benettin(th1_init, th2_init, 0.0, 0.0, n)
+
+fig1, ax1 = plt.subplots(figsize=(10, 5))
+ax1.plot(t_array, lambda_t, linewidth=1, color='blue')
+ax1.set_xlabel("Temps t (s)")
+ax1.set_ylabel("Exposant de Lyapunov λ(t)")
+ax1.set_title(f"Évolution de l'Exposant de Lyapunov dans le temps\nConditions : θ1={th1_init:.2f}, θ2={th2_init:.2f}")
+ax1.axhline(y=lyap_final, color='r', linestyle='--', label=f'Valeur finale: {lyap_final:.4f}')
+ax1.grid(True, alpha=0.3)
+ax1.legend()
+plt.show()
+
+# --- Graphique 2 : λ final en fonction de θ2_0 (en gardant θ1_0 = pi/2) ---
+print("Calcul graphique 2 : Lyapunov exponent en fonction de θ2_0 (cela peut prendre quelques secondes)...")
+theta2_values = np.linspace(0.1, np.pi, 25) # 25 valeurs pour ne pas que ce soit trop long à calculer
+lyapunov_exponents = np.zeros_like(theta2_values)
+
+for idx, th2_val in enumerate(theta2_values):
+    _, lyap_exp = mle_double_benettin(th1_init,  th2_val, 0.0, 0.0, n)
+    lyapunov_exponents[idx] = lyap_exp
+    
+    # Barre de progression simple
+    if (idx + 1) % 5 == 0:
+        print(f"  Progression: {idx + 1}/{len(theta2_values)}")
+
+fig2, ax2 = plt.subplots(figsize=(10, 6))
+ax2.plot(theta2_values, lyapunov_exponents, 'o-', linewidth=2, markersize=6, color='purple')
+ax2.set_xlabel("Angle initial θ1_0 (rad) [θ2_0 fixé à pi/2]")
+ax2.set_ylabel("Exposant de Lyapunov λ")
+ax2.set_title("Exposant de Lyapunov final en fonction de l'angle initial")
+ax2.grid(True, alpha=0.3)
+plt.show()
+
+print("\nSimulations terminées !")

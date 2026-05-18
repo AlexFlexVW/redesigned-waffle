@@ -9,98 +9,45 @@ l = 0.25
 dt = 0.0001       
 n = 100000        
 
-# Conditions initiales (en radians)
-theta1_0 = 1.0  
-theta2_0 = 1.5 
+# Conditions initiales (en radians) np.pi / 2   # 90°
+theta1_0 = 1
+theta2_0 = 1.5
 omega1_0 = 0.0
 omega2_0 = 0.0
 
 # Stockage : Tableaux numpy initialisés à 0
-theta = np.zeros((n, 2))
+theta = np.zeros((n, 2)) #tableau de tableau de taille 2 (couple) de taille n i.e [[0. 0.] ...[0. 0.]]
 omega = np.zeros((n, 2))
 t = np.zeros(n)
 
 # Initialisation
-theta[0, 0] = theta1_0
+theta[0, 0] = theta1_0#=theta[0][0]
 theta[0, 1] = theta2_0
 omega[0, 0] = omega1_0
 omega[0, 1] = omega2_0
 
 def ddtheta(theta1, theta2, omega1, omega2):
-    """
-    Calcule les accélérations angulaires pour un double pendule
-    avec masses égales (m1=m2=1) et longueurs égales (l1=l2=l).
-    """
     delta = theta1 - theta2
-    den = 2.0 - np.cos(delta)**2  # Le déterminant commun
+    sin_delta = np.sin(delta)
+    cos_delta = np.cos(delta)
     
-    # Équation pour theta1''
-    num1 = (omega2**2 * np.sin(delta) + 
-            2.0 * g / l * np.sin(theta1) - 
-            g / l * np.sin(theta2) * np.cos(delta) + 
-            omega1**2 * np.sin(delta) * np.cos(delta))
-    # Note: Les équations standard ont souvent des signes différents selon l'orientation
-    # Voici la forme standard robuste :
-    term1_num = -g * (2 * np.sin(theta1) - np.sin(theta2) * np.cos(delta))
-    term1_dyn = -np.sin(delta) * (omega2**2 + omega1**2 * np.cos(delta)) * l
-    # Correction pour s'assurer des unités, on factorise souvent g et l
+    # Le Déterminant
+    det = 2 - cos_delta**2
     
-    # Formule compacte vérifiée (Réf: ScienceWorld / Wikipedia Double Pendulum)
-    # theta1''
-    num1 = -g * (2 * np.sin(theta1) - np.sin(theta2) * np.cos(delta)) \
-           - np.sin(delta) * (omega2**2 * l + omega1**2 * l * np.cos(delta))
-    d2theta1 = num1 / (l * (2 - np.cos(delta)**2))
-
-    # theta2''
-    num2 = 2 * np.sin(delta) * (omega1**2 * l * (2) + g * np.cos(theta1) + omega2**2 * l * np.cos(delta)) 
-    # Cette forme ci-dessus est parfois instable, voici la version couplée exacte :
+    # Les termes de droite (Vecteur B)
+    # Note : omega1 et omega2 sont les vitesses angulaires (theta points)
+    # ATTENTION : ne pas oublier les carrés sur omega !
+    b1 = - (omega2**2) * sin_delta - 2 * (g/l) * np.sin(theta1)
+    b2 = + (omega1**2) * sin_delta - (g/l) * np.sin(theta2)
     
-    # Version claire et robuste :
-    s_delta = np.sin(delta)
-    c_delta = np.cos(delta)
+    # Résolution matricielle (A^-1 * B)
+    # Ligne 1 : (1 * b1 - cos * b2) / det
+    d2theta1 = (b1 - cos_delta * b2) / det
     
-    # Accélération 1
-    num1 = -g * (2 * np.sin(theta1) - np.sin(theta2) * c_delta) - s_delta * (omega2**2 * l + omega1**2 * l * c_delta)
-    val1 = num1 / (l * (2 - c_delta**2))
+    # Ligne 2 : (-cos * b1 + 2 * b2) / det
+    d2theta2 = (2 * b2 - cos_delta * b1) / det
     
-    # Accélération 2
-    num2 = 2 * s_delta * (omega1**2 * l + g * np.cos(theta1) + omega2**2 * l * c_delta * 0.5) # Attention coefs
-    # Simplifions avec la forme canonique exacte pour m1=m2 :
-    
-    val2 = (2 * s_delta * (omega1**2 * l + g * np.cos(theta1) + omega2**2 * l * c_delta) ) 
-    # Correction num2 :
-    val2 = (2 * s_delta * (omega1**2*l + g*(np.cos(theta1)) + omega2**2*l*c_delta/2.0)) # Non, c'est compliqué à écrire de tête.
-    
-    # --- RESTART FORMULES EXACTES (Source: Wolfram MathWorld, m1=m2) ---
-    mu = 1 + 1 # m1/m2 + 1 = 2
-    
-    # Theta 1 ''
-    num1_g = -g * (2 * np.sin(theta1) - np.sin(theta2) * c_delta)
-    num1_dyn = -l * s_delta * (omega2**2 + omega1**2 * c_delta) # Erreur signe souvent ici
-    # La formule correcte qui marche à tous les coups :
-    d2th1 = (g*(np.sin(theta2)*c_delta - 2*np.sin(theta1)) - l*s_delta*(omega2**2 + omega1**2*c_delta)) / (l*(2 - c_delta**2))
-    
-    # Theta 2 ''
-    d2th2 = (2*s_delta*(omega1**2*l + g*np.cos(theta1) + omega2**2*l*c_delta/2.0)) # Toujours faux
-    
-    # Utilisons la substitution matricielle qui est infaillible :
-    # Equation 1: 2*l*th1'' + l*c_delta*th2'' + l*s_delta*w2^2 + 2*g*s_th1 = 0
-    # Equation 2: l*c_delta*th1'' + l*th2'' - l*s_delta*w1^2 + g*s_th2 = 0
-    
-    # On isole th1'' et th2'' :
-    # A * X = B
-    # A = [[2, c_delta], [c_delta, 1]]
-    # B = [[-l*s_delta*w2^2 - 2*g*sin(th1)], [l*s_delta*w1^2 - g*sin(th2)]] / l
-    
-    b1 = -np.sin(delta)*omega2**2 - 2*(g/l)*np.sin(theta1)
-    b2 = np.sin(delta)*omega1**2 - (g/l)*np.sin(theta2)
-    
-    det = 2 - c_delta**2
-    
-    val1 = (b1 * 1 - b2 * c_delta) / det
-    val2 = (2 * b2 - b1 * c_delta) / det
-    
-    return val1, val2
+    return d2theta1, d2theta2
 
 # Boucle Temporelle (Euler semi-implicite améliore un peu la stabilité)
 for i in range(n-1):
@@ -151,7 +98,7 @@ plt.subplot(2, 1, 1)
 plt.plot(t, theta[:, 0], label=r'$\theta_1$')
 plt.plot(t, theta[:, 1], label=r'$\theta_2$')
 plt.ylabel('Angle (rad)')
-plt.title('Double Pendule (Euler Symplectique)')
+plt.title(f'Double Pendule (Euler Symplectique) Angle initial: ({theta1_0:.3f}, {theta2_0:.3f})')
 plt.legend()
 plt.grid(True)
 
