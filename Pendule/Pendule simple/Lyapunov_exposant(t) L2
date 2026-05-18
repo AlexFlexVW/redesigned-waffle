@@ -62,7 +62,7 @@ def mle_single(theta0, omega0, n_iter):
 
 # --- Remplacement de la section Graphique 1 ---
 print("Calcul graphique 1: lambda(i) pour theta0 = 0.5 rad...")
-lambda_array,  lyapunov_exponent = mle_single(0.5, omega0, n)
+lambda_array,  lyapunov_exponent = mle_single(0.01, omega0, n)
 iterations = np.arange(n)
 
 # CRÉATION PROPRE : On demande directement 2 lignes, 1 colonne, et on récupère ax1 et ax2
@@ -85,7 +85,7 @@ plt.show()
 
 # --- Remplacement de la section Graphique 2 ---
 print("Calcul graphique 2: Lyapunov exponent en fonction de θ₀...")
-theta0_values = np.linspace(0.1, np.pi/2, 30)
+theta0_values = np.linspace(0.01, np.pi/2, 30)
 lyapunov_exponents = np.zeros_like(theta0_values)#tableau de 0 au format de theta0_values
 
 for idx, theta0 in enumerate(theta0_values):
