@@ -1,0 +1,113 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.special import ellipkinc  # Intégrale elliptique complète du 1er type
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+w0 = np.sqrt(g/l) # pulsation
+T0 = 2*np.pi/w0   #Période propre
+
+# Paramètres numériques
+dt = 0.0005       # très petit pas pour limiter l’instabilité
+n = 20000         # nombre d’itérations
+
+# Conditions initiales (petits angles : en radians)
+omega0=0
+
+
+def T0_T(theta0):
+    """
+    Calcule T numérique pour un pas de temps donné et retourne T0 - T
+    """
+    
+    # Adapter le nombre d'itérations selon dt pour garder le temps total similaire
+    n_iter = int(n * 0.001 / dt)
+    
+    # Stockage
+    theta = np.zeros(n_iter)
+    omega = np.zeros(n_iter)
+    t = np.zeros(n_iter)
+    T_liste = []
+
+    theta[0] = theta0
+    omega[0] = omega0
+    t_max = 0
+
+    # Méthode d'Euler
+    for i in range(n_iter-1):
+        omega[i+1] = omega[i] - w0**2 * np.sin(theta[i]) * dt
+        theta[i+1] = theta[i] + omega[i+1] * dt
+        t[i+1] = t[i] + dt
+
+    # Calcul de T avec des max locaux
+    for i in range(1, n_iter-1):
+        if theta[i-1] < theta[i] and theta[i] > theta[i+1]:
+            T_liste.append(t[i] - t_max)
+            t_max = t[i]
+    
+    # Moyenne des périodes détectées
+    if len(T_liste) > 1:
+        T_numeric = np.mean(T_liste[1:])
+    else:
+        T_numeric = np.nan
+    
+    
+
+    #Calcul de la période théorique (formule exacte avec intégrale elliptique)
+    # T = 4 * sqrt(l/g) * K(k)  où k = sin(theta0/2)
+    # K(k) est l'intégrale elliptique complète du premier type
+    k = np.sin(theta0 / 2.0)
+    K_elliptic = ellipkinc(np.pi/2, k**2)  # ellipkinc utile avec m = k^2
+    T_theo = 4 * np.sqrt(l/g) * K_elliptic
+
+
+    # Différence
+    difference = T_theo - T_numeric
+    absolu=abs(difference)
+    
+    return T_numeric, T_theo
+
+
+def plot_difference():
+    """
+    Trace T analytique et T théorique en fonction de θ0
+    """
+    
+    print(f"T0 analytique (petits angles) = {T0:.6f} s")
+    
+    theta0_min = 0.01  # éviter θ0=0
+    theta0_max = np.pi / 6  # 90 degrés (plage complète pour voir la vraie courbe)
+    nb_points = 50
+    
+    theta0_values = np.linspace(theta0_min, theta0_max, nb_points)
+    T_numeric_values = []
+    T0_values = []
+    T_theo_values=[]
+    
+    print("Calcul en cours...")
+    # T0 Période propre
+    T0_values=[T0]*len(theta0_values)
+    for i, theta0 in enumerate(theta0_values):
+        T_num, T_theo = T0_T(theta0)
+        T_numeric_values.append(T_num)
+        T_theo_values.append(T_theo)
+        print(f"θ0 = {theta0:.3f} rad → T_num = {T_num:.6f} s, T_theo = {T_theo:.6f} s")
+    
+    # Affichage
+    plt.figure(figsize=(12, 6))
+    plt.plot(theta0_values, T0_values, 'o-', label="T0 valable pour les petits angles", linewidth=2, markersize=6, color='blue')
+    plt.plot(theta0_values, T_theo_values, 's-', label="T théorique", linewidth=2, markersize=6, color='green')
+    plt.plot(theta0_values, T_numeric_values, 's-', label="T numérique", linewidth=2, markersize=6, color='red')
+
+    plt.xlabel("Angle initial θ₀ (rad)", fontsize=12)
+    plt.ylabel("Période T (s)", fontsize=12)
+    plt.title("Période du pendule en fonction de l'angle initial", fontsize=14)
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == "__main__":
+    plot_difference()

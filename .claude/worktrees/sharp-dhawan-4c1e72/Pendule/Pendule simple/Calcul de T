@@ -1,0 +1,73 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+w0 = np.sqrt(g/l) # pulsation
+
+# Paramètres numériques
+dt = 0.001        # très petit pas pour limiter l’instabilité
+n = 10000         # nombre d’itérations
+
+# Conditions initiales (petits angles : en radians)
+theta0 = 0.001 #np.deg2rad(10)#on convertit en radian car les fonctions cos, sin... prennent des radians en entrée
+omega0 = 0.0
+
+# Stockage
+theta = np.zeros(n)
+omega = np.zeros(n)
+t = np.zeros(n)
+T_liste=[]
+
+theta[0] = theta0
+omega[0] = omega0
+theta_max=theta0
+t_max=0 #le premier maximum est atteint en 0 et puis on actualise
+
+# Méthode d'Euler
+for i in range(n-1):
+    omega[i+1] = omega[i] - w0**2 * np.sin(theta[i]) * dt#dthetat[i+1]= dtheta[i] +ddtheta[i]*dt
+    theta[i+1] = theta[i] + omega[i+1] * dt #thetat[i+1]= theta[i] + dthetat[i+1]*dt
+    t[i+1] = t[i] + dt
+
+
+#Calcul de T avec des max locaux
+for i in range (1,n-1):
+    if theta[i-1]<theta[i] and theta[i]>theta[i+1]:#on regarde les max locaux
+        T_liste.append(t[i]-t_max)
+        theta_max=theta[i]
+        t_max=t[i]
+nb_occ=len(T_liste)
+occurences=[i for i in range(len(T_liste))]
+    
+#T0 Période propre
+T0 = 2*np.pi/w0
+ 
+#Calcul de la période théorique 
+# On évite x = theta0
+eps = 1e-9
+x = np.linspace(0, theta0 - eps, 1000)#plus on augmente n plus on rapproche la solution théorique de la réalité
+f = 1.0/np.sqrt(2*(np.cos(x) - np.cos(theta0)))
+integrale = np.trapezoid(f, x)
+T_theo = (2*T0/np.pi)*integrale
+
+print("Liste des périodes détectées :", T_liste)
+print("Période moyenne :", np.mean(T_liste))#moyenne
+print("T0 :", T0)
+print("Période théorique :", T_theo,"s")
+
+
+# Affichage
+'''plt.plot(t, theta, label="euler_num")
+plt.plot(t, theta0 * np.cos(w0 * t), label="théorique")
+'''
+plt.plot(occurences, T_liste, label="T(occurence) numérique (méth des max locaux)")
+plt.plot(occurences, [T0]*len(T_liste), label="T analytique", linestyle="--")
+
+plt.xlabel("Occurences")
+plt.ylabel("Période T (s)")
+plt.title("Calcul de T")
+plt.legend()
+plt.grid()
+plt.show()

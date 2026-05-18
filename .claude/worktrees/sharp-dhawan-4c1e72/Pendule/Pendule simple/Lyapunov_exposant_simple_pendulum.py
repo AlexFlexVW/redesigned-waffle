@@ -8,13 +8,13 @@ w0 = np.sqrt(g/l) # pulsation
 
 # Paramètres numériques
 dt = 0.0001       # très petit pas
-n = 1000000         # nombre d'itérations
+n = 50000         # nombre d'itérations
 
 # Conditions initiales
 omega0 = 0.0
 
 # Exposant de Lyapunov
-epsilon = 1e-6   # perturbation initiale très petite
+epsilon = 0.001   # perturbation initiale très petite
 
 def mle_single(theta0, omega0, n_iter):
     """
@@ -32,11 +32,11 @@ def mle_single(theta0, omega0, n_iter):
     # Conditions initiales
     theta1[0] = theta0
     omega1[0] = omega0
-    theta2[0] = theta0 + epsilon #epsilon = l'écart initinial
+    theta2[0] = theta0 + epsilon
     omega2[0] = omega0
     
     lambda_array = np.zeros(n_iter)
-
+    somme = 0.0
     
     # Méthode d'Euler pour deux trajectoires proches
     for i in range(n_iter - 1):
@@ -49,49 +49,41 @@ def mle_single(theta0, omega0, n_iter):
         theta2[i+1] = theta2[i] + omega2[i+1] * dt
         
         # Divergence
-        delta_i = np.sqrt((theta2[i+1] - theta1[i+1])**2 + (omega2[i+1] - omega1[i+1])**2)
+        delta_i = abs(theta2[i+1] - theta1[i+1])
         
         if delta_i > 0:
-            limite = np.log(delta_i / epsilon)
-            lambda_array[i+1] = limite / ((i + 1) * dt)
+            somme += np.log(delta_i / epsilon)
+            lambda_array[i+1] = somme / ((i + 1) * dt)
     
-    lyapunov_exponent = limite / (n_iter * dt) # Limite
+    lyapunov_exponent = somme / (n_iter * dt) 
     
     return lambda_array, lyapunov_exponent
 
 
-# --- Remplacement de la section Graphique 1 ---
+# Graphique 1: Lambda en fonction de i pour theta0 initial
 print("Calcul graphique 1: lambda(i) pour theta0 = 0.5 rad...")
-lambda_array,  lyapunov_exponent = mle_single(0.01, omega0, n)
+lambda_vs_i, exp1 = mle_single(0.5, omega0, n)
 iterations = np.arange(n)
 
-# CRÉATION PROPRE : On demande directement 2 lignes, 1 colonne, et on récupère ax1 et ax2
-fig, ax = plt.subplots(figsize=(10, 8))
-
-# Dessin sur le premier graphique (ax1)
-ax.plot(iterations, lambda_array, linewidth=0.5)
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.plot(iterations, lambda_vs_i, linewidth=0.5)
 ax.set_xlabel("Itération i")
-ax.set_ylabel("Exposant de Lyapunov : λ")
-ax.set_title("Exposant de Lyapunov - Pendule simple")
+ax.set_ylabel("Exposant de Lyapunov λ")
+ax.set_title(f"Exposant de Lyapunov en fonction des itérations (θ₀ = 0.5 rad)")
 ax.grid(True, alpha=0.3)
-ax.axhline(y=lyapunov_exponent, color='r', linestyle='--', label=f'MLE: {lyapunov_exponent:.6f}')
+ax.axhline(y=exp1, color='r', linestyle='--', label=f'Valeur finale: {exp1:.6f}')
 ax.legend()
-
-
-
 plt.tight_layout()
 plt.show()
 
-
-# --- Remplacement de la section Graphique 2 ---
+# Graphique 2: Exposant de Lyapunov en fonction de theta0
 print("Calcul graphique 2: Lyapunov exponent en fonction de θ₀...")
-theta0_values = np.linspace(0.01, np.pi/2, 30)
-lyapunov_exponents = np.zeros_like(theta0_values)#tableau de 0 au format de theta0_values
+theta0_values = np.linspace(0.1, np.pi, 30)
+lyapunov_exponents = np.zeros_like(theta0_values)
 
 for idx, theta0 in enumerate(theta0_values):
-    # CORRECTION ICI : La fonction mle_single retourne 4 valeurs, il faut bien les réceptionner
-    _, lyap_exp= mle_single(theta0, omega0, n)
-    lyapunov_exponents[idx] = lyap_exp # On ne garde que la version limite qui est la bonne
+    _, lyap = mle_single(theta0, omega0, n)
+    lyapunov_exponents[idx] = lyap
     if (idx + 1) % 10 == 0:
         print(f"  Progression: {idx + 1}/{len(theta0_values)}")
 
@@ -99,8 +91,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 ax.plot(theta0_values, lyapunov_exponents, 'o-', linewidth=2, markersize=6)
 ax.set_xlabel("Angle initial θ₀ (rad)")
 ax.set_ylabel("Exposant de Lyapunov λ")
-# On sépare la partie LaTeX (r) du saut de ligne et de la variable (f)
-ax.set_title(r"Exposant de Lyapunov en fonction de $\theta_0$ L2 - Pendule simple" + f"\nPour n = {n}")
+ax.set_title("Exposant de Lyapunov en fonction de la condition initiale")
 ax.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()

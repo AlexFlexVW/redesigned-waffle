@@ -1,0 +1,66 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+w0 = np.sqrt(g/l) # pulsation
+
+# Paramètres numériques
+dt = 0.0001        # très petit pas pour limiter l’instabilité
+n = 100000         # nombre d’itérations
+
+# Conditions initiales (petits angles : en radians)
+theta1_0 = 1  #np.deg2rad(10)#on convertit en radian car les fonctions cos, sin... prennent des radians en entrée
+theta2_0 = 1.5 #np.deg2rad(15)
+omega1_0 = 0.0
+omega2_0 = 0.0
+
+# Stockage
+# Crée un tableau de n lignes et 2 colonnes
+theta = np.zeros((n, 2))
+omega = np.zeros((n, 2))
+t = np.zeros(n)
+T_liste=[]
+
+theta[0][0] = theta1_0
+theta[0][1] = theta2_0
+omega[0][0] = omega1_0
+omega[0][1] = omega2_0
+t_max=0 #le premier maximum est atteint en 0 et puis on actualise
+
+def ddtheta (theta1,theta2,omega1,omega2):
+    delta=theta1-theta2
+    d2theta1_dt2 = ((4/3)-(3/4)*np.cos(delta)**2)*(-1/2)*(np.sin(np.sin(delta)*(omega2+(3/2)*omega1*np.cos(delta)) + (3*g/l)*(np.sin(theta1)-1/2*np.sin(theta2)*np.cos(delta))))
+    d2theta2_dt2 = 3/2 * (1- 3/16 * np.cos(delta)**2)* ( omega1*np.sin(delta) +3/8 * omega2 *np.sin(delta)*np.cos(delta) - (g/l)*(np.sin(theta2)-9/8 *np.sin(theta1)*np.cos(delta)))
+    return d2theta1_dt2, d2theta2_dt2
+
+def ddtheta1 (theta1,theta2,omega1,omega2):
+    delta=theta1-theta2
+    d2theta1_dt2 = ((4/3)-(3/4)*np.cos(delta)**2)*(-1/2)*(np.sin(np.sin(delta)*(omega2**2 +(3/2)*(omega1**2)*np.cos(delta)) + (3*g/l)*(np.sin(theta1)-1/2*np.sin(theta2)*np.cos(delta))))
+    return d2theta1_dt2
+
+def ddtheta2 (theta1,theta2,omega1,omega2):
+    delta=theta1-theta2
+    d2theta2_dt2 = 3/2 * (1- 3/16 * np.cos(delta)**2)* ( (omega1**2 )*np.sin(delta) +3/8 * (omega2**2) *np.sin(delta)*np.cos(delta) - (g/l)*(np.sin(theta2)-9/8 *np.sin(theta1)*np.cos(delta)))
+    return d2theta2_dt2  
+       
+# Méthode d'Euler
+for i in range(n-1):
+    omega[i+1] = omega[i] +  ddtheta(theta[i][0],theta[i][1],omega[i][0],omega[i][1]) *dt #dthetat[i+1]= dtheta[i] +ddtheta[i]
+    theta[i+1] = theta[i] + omega[i+1] * dt #thetat[i+1]= theta[i] +
+    t[i+1] = t[i] + dt
+
+# Affichage
+'''plt.plot(t, theta, label="euler_num")
+plt.plot(t, theta0 * np.cos(w0 * t), label="théorique")
+'''
+plt.plot(t, theta, label="θ(t) numérique (Euler)")
+#plt.plot(t, theta0 * np.cos(w0*t), label="Solution analytique", linestyle="--") on a plus accès à la solution théorique du double pendule
+
+plt.xlabel("Temps (s)")
+plt.ylabel("Angle (rad)")
+plt.title("Pendule simple — Euler explicite")
+plt.legend()
+plt.grid()
+plt.show()
