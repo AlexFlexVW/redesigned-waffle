@@ -1,0 +1,99 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+w0 = np.sqrt(g/l) # pulsation
+
+T = 2*np.pi/w0
+# Paramètres numériques
+dt = 0.0005 * T        # très petit pas pour limiter l’instabilité
+n = 10 * int(T / dt)         # nombre d’itérations
+
+# Conditions initiales (petits angles : en radians)
+#theta0 = 1  #np.deg2rad(10)#on convertit en radian car les fonctions cos, sin... prennent des radians en entrée
+omega0 = 0.0
+t = np.zeros(n)
+for i in range(n-1):
+    t[i+1]=t[i]+dt
+
+
+#Exposant de Lyapunov
+epsilon=-0.00001
+def delta(theta1,theta2):
+    pass
+
+def mle (theta0,omega0):
+    # Stockage
+    theta1 = np.zeros(n)
+    omega1 = np.zeros(n)
+    theta2 = np.zeros(n)
+    omega2 = np.zeros(n)
+    delta = np.zeros(n)
+    
+
+    theta1[0] = theta0
+    omega1[0] = omega0
+    theta2[0] = theta0+epsilon
+    omega2[0] = omega0
+    delta[0]=epsilon
+    somme=0
+    mle_t= np.zeros(n)
+    lambda_liste= np.zeros(n)
+
+
+    # Méthode d'Euler
+    for i in range(n-1):
+        omega1[i+1] = omega1[i] - w0**2 * np.sin(theta1[i]) * dt #dthetat[i+1]= dtheta[i] +ddtheta[i]
+        theta1[i+1] = theta1[i] + omega1[i+1] * dt #thetat[i+1]= theta[i] +
+
+        omega2[i+1] = omega2[i] - w0**2 * np.sin(theta2[i]) * dt #dthetat[i+1]= dtheta[i] +ddtheta[i]
+        theta2[i+1] = theta2[i] + omega2[i+1] * dt #thetat[i+1]= theta[i] +
+
+        delta[i+1]=np.sqrt((theta2[i]-theta1[i])**2 + (omega2[i]-omega1[i])**2)
+
+        # ③ Accumuler
+        somme += np.log(delta[i]/ delta[0])
+
+        # hfhfh
+        lambda_liste[i] = np.log(delta[i]/ delta[0]) / ((i+1)*dt)
+
+        mle_t[i+1] = somme / ((i+1)*dt)
+
+    return delta, mle_t,theta1,lambda_liste
+
+delta_value, mle_value ,theta1,lambda_liste= mle(0.001,0)
+plt.plot(t, lambda_liste)
+plt.show()
+plt.plot(t, mle_value)
+plt.show()
+plt.plot(t, theta1, label="θ(t) numérique (Euler)")
+
+"""
+delta_value, mle_value = mle(1,0)
+list_mle=np.zeros(17)
+theta0_liste=np.linspace(0,2,4)
+for i in range (17-1):
+    print(theta0_liste[i])
+    _,list_mle[i]=mle(theta0_liste[i],0)
+
+plt.plot(t, delta)
+plt.plot(theta0_liste, list_mle)
+"""
+
+# Affichage
+'''plt.plot(t, theta, label="euler_num")
+plt.plot(t, theta0 * np.cos(w0 * t), label="théorique")
+'''
+#plt.plot(theta0_liste, mle(theta0_liste,omega0)[0], label="lamda(t) numérique")
+#plt.plot(t, mle[1], label="Exposant de Lyapunov")
+
+#plt.plot(t, theta0 * np.cos(w0*t), label="Solution analytique", linestyle="--")
+
+plt.xlabel("Temps (s)")
+plt.ylabel("Angle (rad)")
+plt.title("Pendule simple — Euler explicite")
+plt.legend()
+plt.grid()
+plt.show()

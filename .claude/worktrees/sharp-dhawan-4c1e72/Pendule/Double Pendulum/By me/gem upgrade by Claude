@@ -1,0 +1,119 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = 9.81          
+l = 0.25          
+# w0 n'est pas nécessaire pour la simulation numérique directe
+
+# Paramètres numériques
+dt = 0.0001       
+n = 100000        
+
+# Conditions initiales (en radians)
+theta1_0 = np.pi / 2   # 90°
+theta2_0 = np.pi / 2   # 90°
+omega1_0 = 0.0
+omega2_0 = 0.0
+
+# Stockage : Tableaux numpy initialisés à 0
+theta = np.zeros((n, 2)) #tableau de tableau de taille 2 (couple) de taille n i.e [[0. 0.] ...[0. 0.]]
+omega = np.zeros((n, 2))
+t = np.zeros(n)
+
+# Initialisation
+theta[0, 0] = theta1_0#=theta[0][0]
+theta[0, 1] = theta2_0
+omega[0, 0] = omega1_0
+omega[0, 1] = omega2_0
+
+def ddtheta(theta1, theta2, omega1, omega2):
+    delta = theta1 - theta2
+    sin_delta = np.sin(delta)
+    cos_delta = np.cos(delta)
+    
+    # Le Déterminant
+    det = 2 - cos_delta**2
+    
+    # Les termes de droite (Vecteur B)
+    # Note : omega1 et omega2 sont les vitesses angulaires (theta points)
+    # ATTENTION : ne pas oublier les carrés sur omega !
+    b1 = - (omega2**2) * sin_delta - 2 * (g/l) * np.sin(theta1)
+    b2 = + (omega1**2) * sin_delta - (g/l) * np.sin(theta2)
+    
+    # Résolution matricielle (A^-1 * B)
+    # Ligne 1 : (1 * b1 - cos * b2) / det
+    d2theta1 = (b1 - cos_delta * b2) / det
+    
+    # Ligne 2 : (-cos * b1 + 2 * b2) / det
+    d2theta2 = (2 * b2 - cos_delta * b1) / det
+    
+    return d2theta1, d2theta2
+
+# Boucle Temporelle (Euler semi-implicite améliore un peu la stabilité)
+for i in range(n-1):
+    d2th1, d2th2 = ddtheta(theta[i, 0], theta[i, 1], omega[i, 0], omega[i, 1])
+    
+    # Mise à jour des vitesses
+    omega[i+1, 0] = omega[i, 0] + d2th1 * dt
+    omega[i+1, 1] = omega[i, 1] + d2th2 * dt
+    
+    # Mise à jour des positions (utiliser la vitesse i+1 est plus stable : Euler Symplectique)
+    theta[i+1, 0] = theta[i, 0] + omega[i+1, 0] * dt
+    theta[i+1, 1] = theta[i, 1] + omega[i+1, 1] * dt
+    
+    t[i+1] = t[i] + dt
+
+def energie(theta1, theta2, omega1, omega2, g, l):
+    """
+    Retourne l'énergie totale adimensionnelle (divisée par mgl).
+    T* + V* doivent être constants si le système est conservatif.
+    """
+    delta = theta1 - theta2
+    
+    # Énergie cinétique adimensionnelle : T / (mgl)
+    # T = 0.5 * m * l^2 * (2w1^2 + w2^2 + 2*w1*w2*cos(delta))
+    # T / (mgl) = (l / 2g) * (...)
+    T_star = (l / (2 * g)) * (2 * omega1**2 + omega2**2 
+                               + 2 * omega1 * omega2 * np.cos(delta))
+    
+    # Énergie potentielle adimensionnelle : V / (mgl)
+    # V = -mgl * (2*cos(theta1) + cos(theta2))
+    # V / (mgl) = -(2*cos(theta1) + cos(theta2))
+    V_star = -(2 * np.cos(theta1) + np.cos(theta2))
+    
+    return T_star, V_star, T_star + V_star
+
+# Remplacement de ta boucle de calcul d'énergie
+E_kinetic   = np.zeros(n)
+E_potential = np.zeros(n)
+E_total     = np.zeros(n)
+
+for i in range(n):
+    E_kinetic[i], E_potential[i], E_total[i] = energie(
+        theta[i, 0], theta[i, 1],
+        omega[i, 0], omega[i, 1],
+        g, l
+    )
+    
+# Affichage
+plt.figure(figsize=(10, 8))
+
+plt.subplot(2, 1, 1)
+plt.plot(t, theta[:, 0], label=r'$\theta_1$')
+plt.plot(t, theta[:, 1], label=r'$\theta_2$')
+plt.ylabel('Angle (rad)')
+plt.title(f'Double Pendule (Euler Symplectique) Angle initial: ({theta1_0:.3f}, {theta2_0:.3f})')
+plt.legend()
+plt.grid(True)
+
+plt.subplot(2, 1, 2)
+plt.plot(t, E_total, label='Énergie Totale', color='red')
+plt.plot(t, E_kinetic, label='Cinétique', alpha=0.5)
+plt.plot(t, E_potential, label='Potentielle', alpha=0.5)
+plt.ylabel('Énergie adimensionnelle E / (mgl)')
+plt.xlabel('Temps (en s)')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()

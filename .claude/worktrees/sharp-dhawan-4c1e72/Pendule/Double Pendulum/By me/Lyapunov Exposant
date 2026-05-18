@@ -1,0 +1,131 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = 9.81          
+l = 0.25          
+# w0 n'est pas nécessaire pour la simulation numérique directe
+
+# Paramètres numériques
+dt = 0.0001       
+n = 100000        
+
+# Conditions initiales (en radians)
+'''theta1_0 = 1.0  
+theta2_0 = 1.5 
+'''
+omega0 = [0.0,0.0]
+
+# Stockage : Tableaux numpy initialisés à 0
+
+t = np.zeros(n)
+delta = np.zeros(n)
+
+
+# Initialisation
+
+
+def ddtheta(theta1, theta2, omega1, omega2):
+    delta = theta1 - theta2
+    sin_delta = np.sin(delta)
+    cos_delta = np.cos(delta)
+    
+    # Le Déterminant
+    det = 2 - cos_delta**2
+    
+    # Les termes de droite (Vecteur B)
+    # Note : omega1 et omega2 sont les vitesses angulaires (theta points)
+    # ATTENTION : ne pas oublier les carrés sur omega !
+    b1 = - (omega2**2) * sin_delta - 2 * (g/l) * np.sin(theta1)
+    b2 = + (omega1**2) * sin_delta - (g/l) * np.sin(theta2)
+    
+    # Résolution matricielle (A^-1 * B)
+    # Ligne 1 : (1 * b1 - cos * b2) / det
+    d2theta1 = (b1 - cos_delta * b2) / det
+    
+    # Ligne 2 : (-cos * b1 + 2 * b2) / det
+    d2theta2 = (2 * b2 - cos_delta * b1) / det
+    
+    return d2theta1, d2theta2
+
+
+# Boucle Temporelle (Euler semi-implicite améliore un peu la stabilité)
+def theta(theta0):
+    theta = np.zeros((n, 2)) #tableau de tableau de taille 2 (couple) de taille n i.e [[0. 0.] ...[0. 0.]]
+    omega = np.zeros((n, 2))
+    omega[0, 0] = omega0[0]
+    omega[0, 1] = omega0[1]
+    theta[0, 0] = theta0[0]
+    theta[0, 1] = theta0[1]    
+    for i in range(n-1):
+        d2th1, d2th2 = ddtheta(theta[i, 0], theta[i, 1], omega[i, 0], omega[i, 1])
+        
+        # Mise à jour des vitesses
+        omega[i+1, 0] = omega[i, 0] + d2th1 * dt
+        omega[i+1, 1] = omega[i, 1] + d2th2 * dt
+        
+        # Mise à jour des positions (utiliser la vitesse i+1 est plus stable : Euler Symplectique)
+        theta[i+1, 0] = theta[i, 0] + omega[i+1, 0] * dt
+        theta[i+1, 1] = theta[i, 1] + omega[i+1, 1] * dt
+        
+        t[i+1] = t[i] + dt
+    return theta,omega
+
+# --- Calcul del'écart entre 2 trajectoires---
+epsilon=0.1
+def delta(x,y):
+    th,omega=delta(theta0)
+    for i in range(n-1):
+    delta[i]=np.linalg.norm()
+
+
+
+# --- Calcul Correct de l'Énergie ---
+E_kinetic = np.zeros(n)
+E_potential = np.zeros(n)
+E_total = np.zeros(n)
+
+# On normalise par m*l^2
+for i in range(n):
+    th1, th2 = theta[i, 0], theta[i, 1]
+    w1, w2 = omega[i, 0], omega[i, 1]
+    delta = th1 - th2
+    
+    # Energie Cinétique T = 0.5 * m * l^2 * (2*w1^2 + w2^2 + 2*w1*w2*cos(delta))
+    # ATTENTION : facteur 2 sur w1^2 car la masse 1 porte la masse 2
+    term_k = 2 * w1**2 + w2**2 + 2 * w1 * w2 * np.cos(delta)
+    E_kinetic[i] = 0.5 * term_k # (facteur m*l^2 implicite = 1)
+    
+    # Energie Potentielle V = -m*g*l * (2*cos(th1) + cos(th2))
+    # ATTENTION : facteur 2 sur cos(th1) car masse 1 soutient masse 2
+    term_p = -(2 * np.cos(th1) + np.cos(th2))
+    E_potential[i] = term_p * (g/l) # ajustement dimensionnel si on veut tout en rad/s^2 ou J
+    
+    # Pour garder cohérence avec ton code précédent qui normalisait par mgl :
+    # K_norm = K / (mgl) = (0.5 m l^2 term_k) / (mgl) = (l/2g) * term_k
+    E_kinetic[i] = (l / (2*g)) * term_k
+    E_potential[i] = term_p # car divisé par mgl, il reste juste les cos
+    
+    E_total[i] = E_kinetic[i] + E_potential[i]
+
+# Affichage
+plt.figure(figsize=(10, 8))
+
+plt.subplot(2, 1, 1)
+plt.plot(t, theta[:, 0], label=r'$\theta_1$')
+plt.plot(t, theta[:, 1], label=r'$\theta_2$')
+plt.ylabel('Angle (rad)')
+plt.title('Double Pendule (Euler Symplectique)')
+plt.legend()
+plt.grid(True)
+
+plt.subplot(2, 1, 2)
+plt.plot(t, E_total, label='Énergie Totale', color='red')
+plt.plot(t, E_kinetic, label='Cinétique', alpha=0.5)
+plt.plot(t, E_potential, label='Potentielle', alpha=0.5)
+plt.ylabel('Énergie (en J)')
+plt.xlabel('Temps (en s)')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()

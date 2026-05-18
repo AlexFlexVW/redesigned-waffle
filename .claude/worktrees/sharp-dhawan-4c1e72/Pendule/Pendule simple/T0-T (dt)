@@ -1,0 +1,103 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+w0 = np.sqrt(g/l) # pulsation
+
+# Paramètres numériques
+n = 10000         # nombre d'itérations
+
+# Conditions initiales (petits angles : en radians)
+theta0 = 0.001
+omega0 = 0.0
+
+
+def T0_T(dt):
+    """
+    Calcule T numérique pour un pas de temps donné et retourne T0 - T
+    """
+    
+    # Adapter le nombre d'itérations selon dt pour garder le temps total similaire
+    n_iter = int(n * 0.001 / dt)
+    
+    # Stockage
+    theta = np.zeros(n_iter)
+    omega = np.zeros(n_iter)
+    t = np.zeros(n_iter)
+    T_liste = []
+
+    theta[0] = theta0
+    omega[0] = omega0
+    t_max = 0
+
+    # Méthode d'Euler
+    for i in range(n_iter-1):
+        omega[i+1] = omega[i] - w0**2 * np.sin(theta[i]) * dt
+        theta[i+1] = theta[i] + omega[i+1] * dt
+        t[i+1] = t[i] + dt
+
+    # Calcul de T avec des max locaux
+    for i in range(1, n_iter-1):
+        if theta[i-1] < theta[i] and theta[i] > theta[i+1]:
+            T_liste.append(t[i] - t_max)
+            t_max = t[i]
+    
+    # Moyenne des périodes détectées
+    if len(T_liste) > 1:
+        T_numeric = np.mean(T_liste[1:])
+    else:
+        T_numeric = np.nan
+    
+    # T0 Période propre
+    T0 = 2*np.pi/w0
+    
+    # Différence
+    difference = T0 - T_numeric
+    absolu=abs(difference)
+    
+    return difference,absolu, T_numeric, T0
+
+
+def plot_difference():
+    """
+    Trace la différence T0 - T en fonction de dt
+    """
+    
+    dt_min = 0.0001
+    dt_max = 0.01
+    nb_points = 30
+    
+    dt_values = np.logspace(np.log10(dt_min), np.log10(dt_max), nb_points)
+    differences = []
+    T_absolu=[]
+    T_numeric_values = []
+    
+    print("Calcul en cours...")
+    for i, dt in enumerate(dt_values):
+        if dt==0.0001:print(T0_T(dt))
+        diff, abs,T_num, T0_val = T0_T(dt)
+        differences.append(diff)
+        T_absolu.append(abs)
+        T_numeric_values.append(T_num)
+        print(f"dt = {dt:.6f} s → T0 - T = {diff:.6f} s")
+    
+    # Affichage
+    plt.figure(figsize=(12, 6))
+    print(T_absolu)
+    plt.plot(dt_values, differences, 'o-', label="T₀ - T", linewidth=2, markersize=6, color='blue')
+    #plt.plot(dt_values, t_absolu, 'o-', label="|T₀ - T|", linewidth=2, markersize=6, color='blue')
+
+    plt.xlabel("Pas de temps dt (s)", fontsize=12)
+    plt.ylabel("Différence T₀ - T (s)", fontsize=12)
+    plt.title("Erreur numérique: T₀ - T en fonction de dt", fontsize=14)
+    plt.xscale('log')
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == "__main__":
+    plot_difference()
