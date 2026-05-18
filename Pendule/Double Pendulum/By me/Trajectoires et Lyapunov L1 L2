@@ -1,0 +1,160 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur de chaque tige (m)
+
+# Paramètres numériques
+dt = 0.0001       # pas de temps
+n = 100000        # nombre d'itérations
+
+# Conditions initiales (rad)
+theta1_0 = np.pi / 2
+theta2_0 = np.pi / 2
+omega1_0 = 0.0
+omega2_0 = 0.0
+
+# Perturbation initiale (appliquée sur theta1)
+epsilon = 1e-3
+
+
+def ddtheta(theta1, theta2, omega1, omega2):
+    """Accélérations angulaires du double pendule (masses et longueurs égales)."""
+    delta = theta1 - theta2
+    sin_delta = np.sin(delta)
+    cos_delta = np.cos(delta)
+    det = 2 - cos_delta**2
+
+    b1 = -(omega2**2) * sin_delta - 2 * (g / l) * np.sin(theta1)
+    b2 = +(omega1**2) * sin_delta - (g / l) * np.sin(theta2)
+
+    d2theta1 = (b1 - cos_delta * b2) / det
+    d2theta2 = (2 * b2 - cos_delta * b1) / det
+    return d2theta1, d2theta2
+
+
+def simulate(theta1_0, theta2_0, omega1_0, omega2_0, n_iter):
+    """
+    Intègre deux trajectoires proches (perturbation ε sur theta1) par
+    Euler semi-implicite, et calcule l'exposant de Lyapunov avec deux normes :
+      - L1 : sqrt(Δθ1² + Δθ2²)   (espace des positions uniquement)
+      - L2 : sqrt(Δθ1² + Δθ2² + Δω1² + Δω2²)   (espace des phases complet)
+    """
+    theta1_a = np.zeros(n_iter); theta2_a = np.zeros(n_iter)
+    omega1_a = np.zeros(n_iter); omega2_a = np.zeros(n_iter)
+    theta1_b = np.zeros(n_iter); theta2_b = np.zeros(n_iter)
+    omega1_b = np.zeros(n_iter); omega2_b = np.zeros(n_iter)
+
+    theta1_a[0] = theta1_0; theta2_a[0] = theta2_0
+    omega1_a[0] = omega1_0; omega2_a[0] = omega2_0
+
+    theta1_b[0] = theta1_0 + epsilon; theta2_b[0] = theta2_0
+    omega1_b[0] = omega1_0; omega2_b[0] = omega2_0
+
+    lambda_L1 = np.zeros(n_iter)
+    lambda_L2 = np.zeros(n_iter)
+
+    for i in range(n_iter - 1):
+        # Trajectoire A
+        a1, a2 = ddtheta(theta1_a[i], theta2_a[i], omega1_a[i], omega2_a[i])
+        omega1_a[i+1] = omega1_a[i] + a1 * dt
+        omega2_a[i+1] = omega2_a[i] + a2 * dt
+        theta1_a[i+1] = theta1_a[i] + omega1_a[i+1] * dt
+        theta2_a[i+1] = theta2_a[i] + omega2_a[i+1] * dt
+
+        # Trajectoire B (perturbée)
+        b1_, b2_ = ddtheta(theta1_b[i], theta2_b[i], omega1_b[i], omega2_b[i])
+        omega1_b[i+1] = omega1_b[i] + b1_ * dt
+        omega2_b[i+1] = omega2_b[i] + b2_ * dt
+        theta1_b[i+1] = theta1_b[i] + omega1_b[i+1] * dt
+        theta2_b[i+1] = theta2_b[i] + omega2_b[i+1] * dt
+
+        # Divergences
+        dth1 = theta1_b[i+1] - theta1_a[i+1]
+        dth2 = theta2_b[i+1] - theta2_a[i+1]
+        dw1 = omega1_b[i+1] - omega1_a[i+1]
+        dw2 = omega2_b[i+1] - omega2_a[i+1]
+
+        delta_L1 = np.sqrt(dth1**2 + dth2**2)
+        delta_L2 = np.sqrt(dth1**2 + dth2**2 + dw1**2 + dw2**2)
+
+        t_i = (i + 1) * dt
+        if delta_L1 > 0:
+            lambda_L1[i+1] = np.log(delta_L1 / epsilon) / t_i
+        if delta_L2 > 0:
+            lambda_L2[i+1] = np.log(delta_L2 / epsilon) / t_i
+
+    return (theta1_a, theta2_a, omega1_a, omega2_a,
+            theta1_b, theta2_b, omega1_b, omega2_b,
+            lambda_L1, lambda_L2)
+
+
+print("Calcul des trajectoires et des exposants de Lyapunov...")
+(theta1_a, theta2_a, omega1_a, omega2_a,
+ theta1_b, theta2_b, omega1_b, omega2_b,
+ lambda_L1, lambda_L2) = simulate(theta1_0, theta2_0, omega1_0, omega2_0, n)
+t = np.arange(n) * dt
+
+# Écarts max sur l'angle (norme position L2) et sur la vitesse
+d_pos = np.sqrt((theta1_b - theta1_a)**2 + (theta2_b - theta2_a)**2)
+d_vel = np.sqrt((omega1_b - omega1_a)**2 + (omega2_b - omega2_a)**2)
+i_pos_max = np.argmax(d_pos)
+i_vel_max = np.argmax(d_vel)
+d_pos_max = d_pos[i_pos_max]
+d_vel_max = d_vel[i_vel_max]
+t_pos_max = t[i_pos_max]
+t_vel_max = t[i_vel_max]
+
+print(f"Écart max position (√Δθ₁²+Δθ₂²) : {d_pos_max:.4e} rad   à t = {t_pos_max:.3f} s")
+print(f"Écart max vitesse  (√Δω₁²+Δω₂²) : {d_vel_max:.4e} rad/s à t = {t_vel_max:.3f} s")
+
+fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, figsize=(11, 11), sharex=True)
+
+# a) Angles des deux trajectoires
+ax1.plot(t, theta1_a, label=r"$\theta_1^A$", linewidth=0.7, color="tab:blue")
+ax1.plot(t, theta1_b, label=r"$\theta_1^B$", linewidth=0.7, color="tab:blue", linestyle="--")
+ax1.plot(t, theta2_a, label=r"$\theta_2^A$", linewidth=0.7, color="tab:orange")
+ax1.plot(t, theta2_b, label=r"$\theta_2^B$", linewidth=0.7, color="tab:orange", linestyle="--")
+ax1.axvline(t_pos_max, color='k', linestyle=':', linewidth=0.8)
+ax1.annotate(f"écart max position = {d_pos_max:.3e} rad\nà t = {t_pos_max:.2f} s",
+             xy=(t_pos_max, theta1_b[i_pos_max]),
+             xytext=(0.98, 0.05), textcoords='axes fraction',
+             ha='right', va='bottom',
+             bbox=dict(boxstyle="round", fc="white", ec="gray", alpha=0.85),
+             arrowprops=dict(arrowstyle="->", color="gray"))
+ax1.set_ylabel("Angle (rad)")
+ax1.set_title(f"Double pendule — perturbation ε = {epsilon} sur θ₁(0)  "
+              f"(θ₁₀ = {theta1_0:.3f}, θ₂₀ = {theta2_0:.3f})")
+ax1.grid(True, alpha=0.3)
+ax1.legend(loc="upper left", ncol=4)
+
+# b) Vitesses angulaires des deux trajectoires
+ax2.plot(t, omega1_a, label=r"$\omega_1^A$", linewidth=0.7, color="tab:blue")
+ax2.plot(t, omega1_b, label=r"$\omega_1^B$", linewidth=0.7, color="tab:blue", linestyle="--")
+ax2.plot(t, omega2_a, label=r"$\omega_2^A$", linewidth=0.7, color="tab:orange")
+ax2.plot(t, omega2_b, label=r"$\omega_2^B$", linewidth=0.7, color="tab:orange", linestyle="--")
+ax2.axvline(t_vel_max, color='k', linestyle=':', linewidth=0.8)
+ax2.annotate(f"écart max vitesse = {d_vel_max:.3e} rad/s\nà t = {t_vel_max:.2f} s",
+             xy=(t_vel_max, omega1_b[i_vel_max]),
+             xytext=(0.98, 0.05), textcoords='axes fraction',
+             ha='right', va='bottom',
+             bbox=dict(boxstyle="round", fc="white", ec="gray", alpha=0.85),
+             arrowprops=dict(arrowstyle="->", color="gray"))
+ax2.set_ylabel("Vitesse angulaire (rad/s)")
+ax2.set_title("Vitesses angulaires des deux trajectoires")
+ax2.grid(True, alpha=0.3)
+ax2.legend(loc="upper left", ncol=4)
+
+# c) Exposants de Lyapunov L1 et L2
+ax3.plot(t, lambda_L1, label="λ (norme L1 : √(Δθ₁² + Δθ₂²))", linewidth=0.7)
+ax3.plot(t, lambda_L2, label="λ (norme L2 : √(Δθ₁² + Δθ₂² + Δω₁² + Δω₂²))",
+         linewidth=0.7)
+ax3.set_xlabel("Temps (s)")
+ax3.set_ylabel("Exposant de Lyapunov λ")
+ax3.set_title("Exposant de Lyapunov — comparaison L1 (positions) vs L2 (phase complet)")
+ax3.grid(True, alpha=0.3)
+ax3.legend()
+
+plt.tight_layout()
+plt.show()

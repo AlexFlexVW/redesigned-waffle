@@ -1,0 +1,121 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Paramètres physiques
+g = 9.81
+l = 0.25
+w0 = np.sqrt(g/l)
+
+# Paramètres numériques
+dom_n=1
+p_n=6
+dt = 0.0001       # très petit pas
+n = int(dom_n * 10**p_n)      # nombre d'itérations
+
+# Conditions initiales
+theta0 = 0.5
+omega0 = 0.0
+
+# Perturbation initiale (norme conservée par renormalisation)
+epsilon = 1e-6
+
+# Intervalle de renormalisation (en nombre de pas)
+# Trop court = bruit numérique, trop long = saturation de la divergence
+T_renorm = 500
+
+
+def mle_benettin(theta0, omega0, n_iter):
+    """
+    Calcule l'exposant de Lyapunov par la méthode de Benettin :
+    intégration de deux trajectoires + renormalisation périodique
+    de l'écart à la norme epsilon, en sommant log(d/epsilon).
+
+    Retourne :
+    - lambda_array : estimation de lambda au cours du temps
+    - lyapunov_exponent : valeur finale
+    """
+    # Trajectoire de référence
+    th1 = theta0
+    om1 = omega0
+    # Trajectoire perturbée
+    th2 = theta0 + epsilon
+    om2 = omega0
+
+    lambda_array = np.zeros(n_iter)
+    sum_log = 0.0
+    t = 0.0
+
+    for i in range(n_iter - 1):
+        # Pas d'Euler pour les deux trajectoires
+        om1 = om1 - w0**2 * np.sin(th1) * dt
+        th1 = th1 + om1 * dt
+
+        om2 = om2 - w0**2 * np.sin(th2) * dt
+        th2 = th2 + om2 * dt
+
+        t += dt
+
+        # Renormalisation périodique
+        if (i + 1) % T_renorm == 0:
+            dth = th2 - th1
+            dom = om2 - om1
+            d = np.sqrt(dth**2 + dom**2)
+
+            if d > 0:
+                sum_log += np.log(d / epsilon)
+                # Remise à l'échelle epsilon dans la même direction
+                factor = epsilon / d
+                th2 = th1 + dth * factor
+                om2 = om1 + dom * factor
+
+            lambda_array[i+1] = sum_log / t
+        else:
+            lambda_array[i+1] = lambda_array[i]
+
+    lyapunov_exponent = sum_log / (n_iter * dt)
+    return lambda_array, lyapunov_exponent
+
+
+# --- Graphique 1 : lambda(t) pour un theta0 donné ---
+print("Calcul graphique 1: lambda(i) pour theta0 = 0.5 rad...")
+lambda_array, lyapunov_exponent = mle_benettin(theta0, omega0, n)
+iterations = np.arange(n)
+
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.plot(iterations, lambda_array, linewidth=0.7)
+ax.set_xlabel("Itération i")
+ax.set_ylabel("Exposant de Lyapunov : λ")
+ax.set_title("Exposant de Lyapunov (Benettin) - Pendule simple")
+ax.grid(True, alpha=0.3)
+ax.axhline(y=lyapunov_exponent, color='r', linestyle='--',
+           label=f'MLE: {lyapunov_exponent:.6f}')
+ax.axhline(y=0, color='k', linestyle=':', alpha=0.5, label='λ = 0 (théorique)')
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+
+# --- Graphique 2 : lambda en fonction de theta0 ---
+print("Calcul graphique 2: Lyapunov exponent en fonction de θ₀...")
+theta0_values = np.linspace(0.01, np.pi/2, 30)
+lyapunov_exponents = np.zeros_like(theta0_values)
+
+for idx, theta0 in enumerate(theta0_values):
+    _, lyap_exp = mle_benettin(theta0, omega0, n)
+    lyapunov_exponents[idx] = lyap_exp
+    if (idx + 1) % 10 == 0:
+        print(f"  Progression: {idx + 1}/{len(theta0_values)}")
+
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.plot(theta0_values, lyapunov_exponents, 'o-', linewidth=2, markersize=6)
+ax.axhline(y=0, color='k', linestyle=':', alpha=0.5, label='λ = 0 (théorique)')
+ax.set_xlabel("Angle initial θ₀ (rad)")
+ax.set_ylabel("Exposant de Lyapunov λ")
+ax.set_title(r"Exposant de Lyapunov (Benettin) en fonction de $\theta_0$ - Pendule simple"
+             + f"\nPour n = {dom_n}e{p_n}, T_renorm = {T_renorm}")
+ax.grid(True, alpha=0.3)
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+print("\nCalculs terminés !")

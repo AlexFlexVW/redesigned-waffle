@@ -7,8 +7,8 @@ l = 0.25          # longueur du pendule (m)
 w0 = np.sqrt(g/l) # pulsation
 
 # Paramètres numériques
-dt = 0.00005       # très petit pas
-n = 100000         # nombre d'itérations
+dt = 0.0001       # très petit pas
+n = 1000000         # nombre d'itérations
 
 # Conditions initiales
 omega0 = 0.0
