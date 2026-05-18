@@ -1,12 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- Paramètres Physiques et Numériques ---
+# --- Paramètres Physiques  ---
 g = 9.81 
 l = 0.25 
+
+# --- Paramètres  Numériques ---
 dt = 0.0001 
-n = 1000000 
+n = int(1e5)
+
+# Conditions initiales
 epsilon = 1e-6  # Perturbation initiale
+th1_0 =np.pi/2
+th2_0 =np.pi/2
+theta0=[th1_0, th2_0]
+omega0=[0.0, 0.0]
+
 
 def ddtheta(th1, th2, w1, w2):
     """Calcule les accélérations du pendule double."""
@@ -76,11 +85,8 @@ def calcul_lyapunov(theta_init, omega_init):
 # --- Graphique 1 : λ(t) pour une condition initiale fixe ---
 print("Calcul graphique 1 : λ(t) pour theta = (pi/2, pi/2)...")
 iterations = np.arange(n)
-th1_0 =np.pi/2
-th2_0 =np.pi/2
-theta0=[th1_0, th2_0]
-omega0=[0.0, 0.0]
-mle_res = calcul_lyapunov(theta0,omega0 )
+
+mle_res = calcul_lyapunov(theta0,omega0)
 
 plt.figure(figsize=(10, 5))
 plt.plot(iterations, mle_res, linewidth=0.5)

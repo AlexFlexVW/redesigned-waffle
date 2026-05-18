@@ -7,10 +7,13 @@ l = 0.25
 w0 = np.sqrt(g/l)
 
 # Paramètres numériques
+dom_n=1
+p_n=6
 dt = 0.0001       # très petit pas
-n = int(1e6)         # nombre d'itérations
+n = int(dom_n * 10**p_n)      # nombre d'itérations
 
 # Conditions initiales
+theta0 = 0.5
 omega0 = 0.0
 
 # Perturbation initiale (norme conservée par renormalisation)
@@ -75,7 +78,7 @@ def mle_benettin(theta0, omega0, n_iter):
 
 # --- Graphique 1 : lambda(t) pour un theta0 donné ---
 print("Calcul graphique 1: lambda(i) pour theta0 = 0.5 rad...")
-lambda_array, lyapunov_exponent = mle_benettin(0.5, omega0, n)
+lambda_array, lyapunov_exponent = mle_benettin(theta0, omega0, n)
 iterations = np.arange(n)
 
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -109,7 +112,7 @@ ax.axhline(y=0, color='k', linestyle=':', alpha=0.5, label='λ = 0 (théorique)'
 ax.set_xlabel("Angle initial θ₀ (rad)")
 ax.set_ylabel("Exposant de Lyapunov λ")
 ax.set_title(r"Exposant de Lyapunov (Benettin) en fonction de $\theta_0$ - Pendule simple"
-             + f"\nPour n = {n}, T_renorm = {T_renorm}")
+             + f"\nPour n = {dom_n}e{p_n}, T_renorm = {T_renorm}")
 ax.grid(True, alpha=0.3)
 ax.legend()
 plt.tight_layout()
