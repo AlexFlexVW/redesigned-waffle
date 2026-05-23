@@ -61,7 +61,7 @@ plt.plot(t, theta0 * np.cos(w0 * t), label="théorique")
 '''
 plt.plot(t, theta, label="θ(t) numérique (Euler)")
 plt.plot(t, theta0 * np.cos(w0*t), label="Solution analytique", linestyle="--")
-
+#Solution analytique pas vraiment pertiente si pas un petit angle
 plt.xlabel("Temps (s)")
 plt.ylabel("Angle (rad)")
 plt.title("Pendule simple — Euler explicite")
