@@ -11,7 +11,7 @@ T = 10.0
 dt = 0.001
 n = int(T / dt) + 1
 
-theta0 = 1.0
+theta0 = 10.0
 omega0 = 0.0
 
 t = np.linspace(0, T, n)
