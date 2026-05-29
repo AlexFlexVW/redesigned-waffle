@@ -1,5 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+
+# Paramètres globaux
+plt.rcParams.update({'font.size': 15})
 
 # Pendule linéarisé (petit angle) résolu avec RK4
 g = 9.81
@@ -38,29 +42,63 @@ for i in range(n - 1):
 Ec = 0.5 * m * (l * omega) ** 2
 Ep = 0.5 * m * g * l * theta ** 2
 E = Ec + Ep
+E0 = E[0]
+
+# --- QUANTIFICATION DE LA CONSERVATION ---
+sigma_rel  = np.std(E) / abs(E0) * 100               # en %
+drift      = np.polyfit(np.arange(len(E)), E, 1)[0]  # J/itération
+range_rel  = (E.max() - E.min()) / abs(E0) * 100     # en %
+
+print(f"--- Conservation de l'énergie (RK4) ---")
+print(f"σ(E)/E₀  = {sigma_rel:.4e} %")
+print(f"Dérive   = {drift:.4e} J/itération")
+print(f"Range/E₀ = {range_rel:.4e} %")
+print("---------------------------------------")
 
 # Solution analytique pour comparaison
 w0 = np.sqrt(g / l)
 theta_th = theta0 * np.cos(w0 * t)
 
-# Tracé
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(9, 6))
-ax1.plot(t, theta, label='θ (RK4 linéarisé)')
-ax1.plot(t, theta_th, label='Solution analytique (cos)', linestyle='--')
-ax1.set_ylabel('Angle (rad)')
-ax1.legend()
-ax1.grid(True)
 
-ax2.plot(t, Ec, label='Ec')
-ax2.plot(t, Ep, label='Ep (approx)')
-ax2.plot(t, E, label='E totale', linewidth=1.2)
-ax2.set_xlabel('Temps (s)')
-ax2.set_ylabel('Energie (J)')
-ax2.legend()
-ax2.grid(True)
+# --- GESTION DES FICHIERS ---
+# Définition du chemin absolu vers ton dossier cible
+output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_simple")
 
-plt.tight_layout()
-fig_path = 'RK4_pendulum_linear.png'
-plt.savefig(fig_path)
-print('Figure saved to', fig_path)
+# SÉCURITÉ : On vérifie si le dossier existe vraiment
+if not output_dir.exists():
+    # Si le dossier n'existe pas, on lève une erreur et on arrête le script
+    raise FileNotFoundError(
+        f"\n[ERREUR] Le dossier cible n'existe pas :\n'{output_dir}'\n"
+        "Veuillez le créer manuellement avant de lancer le script."
+    )
+
+# 1. GRAPHIQUE DES ANGLES
+plt.figure(figsize=(9, 5))
+plt.plot(t, theta, label='θ (RK4 linéarisé)')
+plt.plot(t, theta_th, label='Solution analytique (cos)', linestyle='--')
+plt.xlabel('Temps (s)')
+plt.ylabel('Angle (rad)')
+plt.title(fr'Pendule simple linéarisé — RK4 ($\theta_0={theta0}$ rad)')
+plt.legend()
+plt.grid(True)
+nom_fichier_angle = f"angle_plot_ps_RK4_approx_petit_angle_th0={theta0}.png"
+angle_path = output_dir / nom_fichier_angle
+plt.savefig(angle_path, bbox_inches='tight')
+
+
+# 2. GRAPHIQUE DE L'ÉNERGIE MÉCANIQUE (ZOOM)
+plt.figure(figsize=(9, 5))
+plt.plot(t, E, label='E mécanique', linewidth=1.5, color='green')
+plt.xlabel('Temps (s)')
+plt.ylabel('Energie (J)')
+plt.title(fr"Conservation de l'énergie mécanique — RK4 ($\theta_0={theta0}$ rad)")
+plt.legend()
+plt.grid(True)
+nom_fichier_energie_mec = f"energy_mec_plot_ps_RK4_approx_petit_angle_th0={theta0}.png"
+energy_tot_path = output_dir / nom_fichier_energie_mec
+plt.savefig(energy_tot_path, bbox_inches='tight')
+
+print(f"Graphiques sauvegardés avec succès dans :\n{output_dir}")
+
+# Affichage final
 plt.show()
