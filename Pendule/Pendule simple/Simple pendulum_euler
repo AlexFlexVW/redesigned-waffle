@@ -73,7 +73,7 @@ print("Période théorique (intégrale) :", T_theo,"s")
 
 # --- GESTION DES FICHIERS ---
 # Utilisation de Path (pathlib) avec ton chemin absolu sous Windows
-output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_simple")
+output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_simple\euler")
 output_dir.mkdir(parents=True, exist_ok=True)
 
 # 1. Affichage de l'angle
@@ -86,7 +86,7 @@ plt.title(fr'Pendule simple — Euler-Cromer ($\theta_0$={theta0} rad)')
 plt.legend()
 plt.grid(True)
 # Suppression du symbole '=' pour éviter les conflits Windows
-nom_fichier_angle = f"angle_plot_ps_th0_{theta0}_rad.png"
+nom_fichier_angle = f"angle_plot_ps_euler_NL_th0_{theta0}_rad.png"
 angle_path = output_dir / nom_fichier_angle
 plt.savefig(angle_path, bbox_inches='tight')
 
@@ -100,7 +100,7 @@ plt.ylabel('Énergie (J)')
 plt.title(fr'Énergies du pendule ($\theta_0$={theta0} rad)')
 plt.legend()
 plt.grid(True)
-nom_fichier_energie = f"energy_all_plot_ps_th0_{theta0}_rad.png"
+nom_fichier_energie = f"energy_all_plot_ps_euler_NL_th0_{theta0}_rad.png"
 energy_path = output_dir / nom_fichier_energie
 plt.savefig(energy_path, bbox_inches='tight')
 
@@ -112,7 +112,7 @@ plt.ylabel('Énergie (J)')
 plt.title(fr'Conservation énergie mécanique (Zoom) ($\theta_0$={theta0} rad)')
 plt.legend()
 plt.grid(True)
-nom_fichier_energie_mec = f"energy_mec_plot_ps_th0_{theta0}_rad.png"
+nom_fichier_energie_mec = f"energy_mec_plot_ps_euler_NL_th0_{theta0}_rad.png"
 energy_tot_path = output_dir / nom_fichier_energie_mec
 plt.savefig(energy_tot_path, bbox_inches='tight')
 

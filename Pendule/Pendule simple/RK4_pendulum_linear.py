@@ -62,7 +62,7 @@ theta_th = theta0 * np.cos(w0 * t)
 
 # --- GESTION DES FICHIERS ---
 # Définition du chemin absolu vers ton dossier cible
-output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_simple")
+output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_simple\rk4")
 
 # SÉCURITÉ : On vérifie si le dossier existe vraiment
 if not output_dir.exists():
@@ -81,7 +81,7 @@ plt.ylabel('Angle (rad)')
 plt.title(fr'Pendule simple linéarisé — RK4 ($\theta_0={theta0}$ rad)')
 plt.legend()
 plt.grid(True)
-nom_fichier_angle = f"angle_plot_ps_RK4_approx_petit_angle_th0={theta0}.png"
+nom_fichier_angle = f"angle_plot_ps_RK4_approx_L_th0={theta0}.png"
 angle_path = output_dir / nom_fichier_angle
 plt.savefig(angle_path, bbox_inches='tight')
 
@@ -91,10 +91,10 @@ plt.figure(figsize=(9, 5))
 plt.plot(t, E, label='E mécanique', linewidth=1.5, color='green')
 plt.xlabel('Temps (s)')
 plt.ylabel('Energie (J)')
-plt.title(fr"Conservation de l'énergie mécanique — RK4 ($\theta_0={theta0}$ rad)")
+plt.title(fr"Conservation de l'énergie mécanique — RK4 - Linear ($\theta_0={theta0}$ rad)")
 plt.legend()
 plt.grid(True)
-nom_fichier_energie_mec = f"energy_mec_plot_ps_RK4_approx_petit_angle_th0={theta0}.png"
+nom_fichier_energie_mec = f"energy_mec_plot_ps_RK4_approx_L_th0={theta0}.png"
 energy_tot_path = output_dir / nom_fichier_energie_mec
 plt.savefig(energy_tot_path, bbox_inches='tight')
 
