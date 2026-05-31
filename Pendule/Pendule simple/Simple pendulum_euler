@@ -79,7 +79,8 @@ output_dir.mkdir(parents=True, exist_ok=True)
 # 1. Affichage de l'angle
 plt.figure(figsize=(9, 5))
 plt.plot(t, theta, label="θ(t) numérique (Euler)")
-plt.plot(t, theta0 * np.cos(w0*t), label="Solution analytique (cos)", linestyle="--")
+if theta0<=1 :#Si on peut faire l'apprxomiation des eptits angless
+    plt.plot(t, theta0 * np.cos(w0*t), label="Solution analytique (cos)", linestyle="--")
 plt.xlabel("Temps (s)")
 plt.ylabel("Angle (rad)")
 plt.title(fr'Pendule simple — Euler-Cromer ($\theta_0$={theta0} rad)')

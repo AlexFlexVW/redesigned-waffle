@@ -105,7 +105,7 @@ print("--------------------------------------------------")
 output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_double\euler")
 
 # Noms de fichiers propres (sans LaTeX ni caractères spéciaux)
-base_name = f"pd_th1_{theta1_0}_th2_{theta2_0}"
+base_name = f"pd_euler_th1_{theta1_0}_th2_{theta2_0}"
 
 
 # 1. GRAPHIQUE DES ANGLES
@@ -117,7 +117,7 @@ plt.ylabel('Angle (rad)')
 plt.title(fr'Angles Pendule Double — Euler Symplectique ($\theta_1={theta1_0}, \theta_2={theta2_0}$)')
 plt.legend()
 plt.grid(True)
-angle_path = output_dir / f"angle_plot__pd_euler{base_name}.png"
+angle_path = output_dir / f"angle_plot__{base_name}.png"
 plt.savefig(angle_path, bbox_inches='tight')
 
 # 2. GRAPHIQUE DE TOUTES LES ÉNERGIES
@@ -130,7 +130,7 @@ plt.xlabel('Temps (s)')
 plt.title(fr"Energies du pendule — Euler ($\theta_1={theta1_0}, \theta_2={theta2_0}$)")
 plt.legend()
 plt.grid(True)
-energy_path = output_dir / f"energy_all_plot_pd_euler{base_name}.png"
+energy_path = output_dir / f"energy_all_plot__{base_name}.png"
 plt.savefig(energy_path, bbox_inches='tight')
 
 # 3. GRAPHIQUE DE L'ÉNERGIE TOTALE UNIQUEMENT (ZOOM)
@@ -141,7 +141,7 @@ plt.xlabel('Temps (s)')
 plt.title(fr"Conservation E — Euler ($\theta_1={theta1_0}, \theta_2={theta2_0}$) (Zoom)")
 plt.legend()
 plt.grid(True)
-energy_tot_path = output_dir / f"energy_tot_plot__pd_euler{base_name}.png"
+energy_tot_path = output_dir / f"energy_tot_plot__{base_name}.png"
 plt.savefig(energy_tot_path, bbox_inches='tight')
 
 print(f"Graphiques sauvegardés avec succès dans : {output_dir}")
