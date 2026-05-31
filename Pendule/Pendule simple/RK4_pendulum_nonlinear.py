@@ -15,7 +15,7 @@ T = 10.0
 dt = 0.001
 n = int(T / dt) + 1
 
-theta0 = 10.0
+theta0 = 1.6
 omega0 = 0.0
 
 t = np.linspace(0, T, n)
@@ -32,11 +32,12 @@ def deriv(state):
 # RK4
 for i in range(n - 1):
     y = np.array([theta[i], omega[i]])
-    k1 = deriv(y)
-    k2 = deriv(y + 0.5 * dt * k1)
-    k3 = deriv(y + 0.5 * dt * k2)
-    k4 = deriv(y + dt * k3)
+    k1 = deriv(y)                   #pente au début du pas (= Euler classique)
+    k2 = deriv(y + 0.5 * dt * k1)   #pente au milieu du pas, en utilisant k1 pour s'y projeter
+    k3 = deriv(y + 0.5 * dt * k2)   #pente au milieu du pas, en utilisant k2 (estimation améliorée du milieu)
+    k4 = deriv(y + dt * k3)         #pente à la fin du pas, en utilisant k3
     y_next = y + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
+    #les pentes du milieu comptent double car elles représentent mieux le comportement sur tout l'intervalle (règle de Simpson)
     theta[i + 1], omega[i + 1] = y_next
 
 # Energies (exactes pour Ep)
