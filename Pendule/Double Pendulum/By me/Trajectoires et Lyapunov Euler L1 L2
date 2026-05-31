@@ -171,7 +171,7 @@ plt.tight_layout()
 fig.subplots_adjust(top=0.92)
 
 # Sauvegarde
-nom_fichier = f"lyapunov_pd_Euler_th1_{theta1_0:.2f}_th2_{theta2_0:.2f}.png"
+nom_fichier = f"traj_et_lyapunov_euler_eps={epsilon}_th1={theta1_0:.2f}_th2={theta2_0:.2f}.png"
 chemin_sauvegarde = output_dir / nom_fichier
 plt.savefig(chemin_sauvegarde, bbox_inches='tight', dpi=300)
 print(f"\nGraphique sauvegardé avec succès dans :\n{chemin_sauvegarde}")

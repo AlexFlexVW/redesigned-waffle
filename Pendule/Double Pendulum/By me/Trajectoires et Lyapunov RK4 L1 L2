@@ -185,7 +185,7 @@ plt.tight_layout()
 
 # Sauvegarde
 # On formate avec pi/2 pour un nom de fichier lisible
-nom_fichier = f"lyapunov_RK4_th1_{theta1_0:.2f}_th2_{theta2_0:.2f}.png"
+nom_fichier = f"traj_et_lyapunov_RK4_esp={epsilon}_th1={theta1_0:.2f}_th2={theta2_0:.2f}.png"
 chemin_sauvegarde = output_dir / nom_fichier
 plt.savefig(chemin_sauvegarde, bbox_inches='tight')
 print(f"\nGraphique sauvegardé avec succès dans :\n{chemin_sauvegarde}")

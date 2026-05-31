@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from numba import njit
 
 # Paramètres globaux d'affichage
 plt.rcParams.update({'font.size': 14})
@@ -24,6 +25,8 @@ omega0_fixe = 0.0
 epsilon = 1e-6
 T_renorm = 500
 
+# Numba va compiler cette fonction mathématique à la vitesse de l'éclair
+@njit
 def deriv_ps(state):
     """
     Dérivée pour le pendule simple (RK4).
@@ -32,6 +35,7 @@ def deriv_ps(state):
     th, om = state
     return np.array([om, -w0**2 * np.sin(th)])
 
+@njit
 def mle_benettin_RK4(theta0, omega0, n_iter):
     """
     Calcule l'exposant de Lyapunov par la méthode de Benettin avec RK4.
@@ -147,7 +151,7 @@ ax2.legend()
 plt.tight_layout()
 fig2.subplots_adjust(top=0.88)
 nom_fig2=f"lyapunov_eps={epsilon}_th0={theta0_fixe}_rk4.png"
-chemin_fig2 = output_dir / "lyapunov_vs_th0_RK4_ps.png"
+chemin_fig2 = output_dir / "lyapunov_th0_RK4.png"
 plt.savefig(chemin_fig2, bbox_inches='tight', dpi=300)
 print(f"Graphique 2 sauvegardé : {chemin_fig2.name}")
 plt.show()
