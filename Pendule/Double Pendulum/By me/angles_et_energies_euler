@@ -92,7 +92,7 @@ sigma_rel  = np.std(E_mec) / abs(E0) * 100
 drift      = np.polyfit(np.arange(len(E_mec)), E_mec, 1)[0]
 range_rel  = (E_mec.max() - E_mec.min()) / abs(E0) * 100
 
-print("--- Conservation de l'énergie (Double Pendule) ---")
+print("--- Conservation de l'énergie (Pendule double) Euler ---")
 print(f"σ(E)/E₀  = {sigma_rel:.4e} %")
 print(f"Dérive   = {drift:.4e} (Unité E*)/itération")
 print(f"Range/E₀ = {range_rel:.4e} %")
@@ -125,7 +125,7 @@ plt.figure(figsize=(9, 5))
 plt.plot(t, E_cinetique, label='Cinétique', alpha=0.7)
 plt.plot(t, E_potential, label='Potentielle', alpha=0.7)
 plt.plot(t, E_mec, label='Énergie Mécanique', color='red', linewidth=1.5)
-plt.ylabel('Énergie adimensionnelle E/(mgl)')
+plt.ylabel('Énergie (J)')
 plt.xlabel('Temps (s)')
 plt.title(fr"Energies du pendule — Euler ($\theta_1={theta1_0}, \theta_2={theta2_0}$)")
 plt.legend()
@@ -135,10 +135,10 @@ plt.savefig(energy_path, bbox_inches='tight')
 
 # 3. GRAPHIQUE DE L'ÉNERGIE TOTALE UNIQUEMENT (ZOOM)
 plt.figure(figsize=(9, 5))
-plt.plot(t, E_mec, label='Énergie Totale', color='red', linewidth=1.5)
-plt.ylabel('Énergie adimensionnelle E/(mgl)')
+plt.plot(t, E_mec, label='Énergie Mécanique', color='red', linewidth=1.5)
+plt.ylabel('Énergie (J)')
 plt.xlabel('Temps (s)')
-plt.title(fr"Conservation E — Euler ($\theta_1={theta1_0}, \theta_2={theta2_0}$) (Zoom)")
+plt.title(fr"Conservation E — Euler ($\theta_1={theta1_0}, \theta_2={theta2_0}$)")
 plt.legend()
 plt.grid(True)
 energy_tot_path = output_dir / f"energy_tot_plot__{base_name}.png"

@@ -87,7 +87,7 @@ sigma_rel  = np.std(E_total) / abs(E0) * 100               # en %
 drift      = np.polyfit(np.arange(len(E_total)), E_total, 1)[0]  # par itération
 range_rel  = (E_total.max() - E_total.min()) / abs(E0) * 100     # en %
 
-print(f"--- Conservation de l'énergie (Double Pendule NL - RK4) ---")
+print(f"--- Conservation de l'énergie (Double Pendule  - RK4) ---")
 print(f"σ(E)/E₀  = {sigma_rel:.4e} %")
 print(f"Dérive   = {drift:.4e} (Unité E*)/itération")
 print(f"Range/E₀ = {range_rel:.4e} %")
@@ -113,8 +113,8 @@ label_fichier = f"th1={theta1_0}_th2={theta2_0}"
 
 # 1. GRAPHIQUE DES ANGLES
 plt.figure(figsize=(9, 5))
-plt.plot(t, theta[:, 0], label=r'$\theta_1$ (RK4 NL)')
-plt.plot(t, theta[:, 1], label=r'$\theta_2$ (RK4 NL)')
+plt.plot(t, theta[:, 0], label=r'$\theta_1$')
+plt.plot(t, theta[:, 1], label=r'$\theta_2$')
 plt.xlabel('Temps (s)')
 plt.ylabel('Angle (rad)')
 plt.title(fr'Double Pendule — RK4 ({label_titre})')
@@ -127,9 +127,9 @@ plt.savefig(angle_path, bbox_inches='tight')
 
 # 2. GRAPHIQUE DE L'ÉNERGIE MÉCANIQUE (ZOOM)
 plt.figure(figsize=(9, 5))
-plt.plot(t, E_total, label='E totale', linewidth=1.5, color='red')
+plt.plot(t, E_total, label='E Mécanique', linewidth=1.5, color='red')
 plt.xlabel('Temps (s)')
-plt.ylabel('Énergie adimensionnelle E/(mgl)')
+plt.ylabel('Énergie (J)')
 plt.title(fr"Conservation de l'énergie mécanique — RK4 ({label_titre})")
 plt.legend()
 plt.grid(True)
