@@ -12,13 +12,13 @@ l = 0.25
 w0 = np.sqrt(g/l)
 
 # Paramètres numériques
-dom_n = 1
+coeff_n = 1
 p_n = 6
 dt = 0.0001
-n = int(dom_n * 10**p_n)
+n = int(coeff_n * 10**p_n)
 
 # Conditions initiales
-theta0_fixe = 0.5
+theta0_fixe = 1.0
 omega0_fixe = 0.0
 
 # Perturbation et renormalisation
@@ -106,7 +106,7 @@ iterations = np.arange(n)
 
 fig1, ax1 = plt.subplots(figsize=(10, 6))
 titre_1 = (f"Convergence de l'exposant de Lyapunov - RK4\n"
-           f"Pendule simple — $\\theta_0={theta0_fixe}$ rad")
+           f"Pendule simple — Perturbation ε={epsilon} — $\\theta_0={theta0_fixe}$ rad")
 fig1.suptitle(titre_1, fontsize=16)
 
 ax1.plot(iterations, lambda_array, linewidth=0.7, color='tab:blue')
@@ -138,7 +138,7 @@ for idx, th0 in enumerate(theta0_values):
 
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 titre_2 = (f"MLE en fonction de $\\theta_0$ (RK4)\n"
-           f"Pendule simple — $n = {dom_n}e{p_n}$, $T_{{renorm}} = {T_renorm}$")
+           f"Pendule simple — $n = {coeff_n}e{p_n}$, $T_{{renorm}} = {T_renorm}$")
 fig2.suptitle(titre_2, fontsize=16)
 
 ax2.plot(theta0_values, lyapunov_exponents, 'o-', linewidth=2, markersize=6, color='purple')

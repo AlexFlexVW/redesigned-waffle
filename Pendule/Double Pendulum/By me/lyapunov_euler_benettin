@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from numba import njit
 
 # Paramètres globaux d'affichage
-plt.rcParams.update({'font.size': 14})
+plt.rcParams.update({'font.size': 15})
 
 # --- Paramètres Physiques  ---
 g = 9.81 
@@ -11,7 +12,7 @@ l = 0.25
 
 # --- Paramètres Numériques ---
 dt = 0.0001 
-n = int(1e5)
+n =int(1e5)
 
 # Conditions initiales
 epsilon = 1e-6  # Perturbation initiale
@@ -20,6 +21,7 @@ th2_0 = np.pi/2
 theta0 = [th1_0, th2_0]
 omega0 = [0.0, 0.0]
 
+@njit
 def ddtheta(th1, th2, w1, w2):
     """
     Calcule les accélérations du pendule double.
@@ -36,6 +38,7 @@ def ddtheta(th1, th2, w1, w2):
     
     return d2th1, d2th2
 
+@njit
 def calcul_lyapunov_Euler(theta_init, omega_init):
     """
     Calcule l'exposant de Lyapunov max via l'algorithme de Benettin avec Euler semi-implicite.
@@ -95,7 +98,7 @@ def calcul_lyapunov_Euler(theta_init, omega_init):
 # ==========================================
 # GESTION DES FICHIERS
 # ==========================================
-output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_double\euler\lyapunov exposant")
+output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_double\euler\lyapunov_exposant")
 
 if not output_dir.exists():
     raise FileNotFoundError(
@@ -115,7 +118,7 @@ mle_res = calcul_lyapunov_Euler(theta0, omega0)
 
 fig1 = plt.figure(figsize=(10, 5))
 # Titre propre et harmonisé (sans le gras forcé)
-titre_1 = (f"Exposant de Lyapunov - Euler semi-implicite\n"
+titre_1 = (f"Exposant de Lyapunov - Euler semi-implicite — Perturbation ε={epsilon} sur θ₁\n"
            f"$\\theta_1={th1_0:.2f}$ rad, $\\theta_2={th2_0:.2f}$ rad")
 fig1.suptitle(titre_1, fontsize=16)
 
@@ -129,7 +132,7 @@ plt.tight_layout()
 fig1.subplots_adjust(top=0.88) # Laisse respirer le Suptitle
 
 # Sauvegarde Graphique 1
-nom_fig1 = f"lyapunov_convergence_Euler_th1_{th1_0:.2f}_th2_{th2_0:.2f}.png"
+nom_fig1 = f"lyapunov_convergence_Euler_th1_{th1_0:.2f}_th2_{th2_0:.2f}_eps{epsilon}.png"
 chemin_fig1 = output_dir / nom_fig1
 plt.savefig(chemin_fig1, bbox_inches='tight', dpi=300)
 print(f"Graphique 1 sauvegardé : {nom_fig1}")
@@ -162,7 +165,7 @@ plt.tight_layout()
 fig2.subplots_adjust(top=0.88)
 
 # Sauvegarde Graphique 2
-nom_fig2 = f"lyapunov_vs_th2_Euler_th1_{th1_0:.2f}.png"
+nom_fig2 = f"lyapunov_th2_pd_Euler_th1_{th1_0:.2f}_eps{epsilon}.png"
 chemin_fig2 = output_dir / nom_fig2
 plt.savefig(chemin_fig2, bbox_inches='tight', dpi=300)
 print(f"Graphique 2 sauvegardé : {nom_fig2}")

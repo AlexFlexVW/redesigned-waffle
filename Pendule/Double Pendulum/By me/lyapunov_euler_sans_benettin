@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from numba import njit
 
 # Paramètres physiques
 g = 9.81          
@@ -9,7 +10,7 @@ l = 0.25
 dt = 0.0001       
 n = 100000        
 epsilon = 1e-6  # Perturbation initiale très petite
-
+@njit
 def ddtheta(theta1, theta2, omega1, omega2):
     """Calcule les accélérations angulaires du pendule double."""
     delta = theta1 - theta2
@@ -26,6 +27,7 @@ def ddtheta(theta1, theta2, omega1, omega2):
     
     return d2theta1, d2theta2
 
+@njit
 def mle_double_benettin(th1_0, th2_0, w1_0, w2_0, n_iter):
     # Initialisation des trajectoires (on n'a besoin que des états courants)
     # Ref: [th1, th2, w1, w2] | Pert: [p1, p2, g1, g2]

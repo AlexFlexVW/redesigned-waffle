@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from numba import njit
 
 # Paramètres globaux d'affichage
 plt.rcParams.update({'font.size': 14})
@@ -20,6 +21,7 @@ th2_0 = np.pi/2
 theta0 = [th1_0, th2_0]
 omega0 = [0.0, 0.0]
 
+@njit
 def deriv(state):
     """
     Calcule les dérivées pour RK4 (Double pendule).
@@ -39,6 +41,7 @@ def deriv(state):
     return np.array([w1, w2, d2th1, d2th2])
 
 
+@njit
 def calcul_lyapunov_RK4(theta_init, omega_init):
     """
     Calcule l'exposant de Lyapunov max via l'algorithme de Benettin avec RK4.
@@ -116,7 +119,7 @@ mle_res = calcul_lyapunov_RK4(theta0, omega0)
 
 fig1 = plt.figure(figsize=(10, 5))
 # Titre propre et bien espacé
-titre_1 = (f"Pendule double — RK4 — Perturbation ε={epsilon} sur θ₁(0)\n"
+titre_1 = (f"Pendule double — RK4 — Perturbation ε={epsilon} sur θ₁\n"
               f"(θ₁₀ = {th1_0:.3f}, θ₂₀ = {th2_0:.3f})")
 fig1.suptitle(titre_1, fontsize=16)
 

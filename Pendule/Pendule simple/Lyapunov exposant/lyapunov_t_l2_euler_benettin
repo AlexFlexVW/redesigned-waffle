@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from numba import njit
+
 
 # Paramètres globaux d'affichage
 plt.rcParams.update({'font.size': 15})
@@ -17,7 +19,7 @@ dt = 0.0001       # très petit pas
 n = int(dom_n * 10**p_n)      # nombre d'itérations
 
 # Conditions initiales pour le graphe 1
-theta0_fixe = 0.5
+theta0_fixe = 1.0
 omega0_fixe = 0.0
 
 # Perturbation initiale (norme conservée par renormalisation)
@@ -26,6 +28,7 @@ epsilon = 1e-6
 # Intervalle de renormalisation (en nombre de pas)
 T_renorm = 500
 
+@njit
 def mle_benettin_Euler(theta0, omega0, n_iter):
     """
     Calcule l'exposant de Lyapunov par la méthode de Benettin (Euler semi-implicite).
