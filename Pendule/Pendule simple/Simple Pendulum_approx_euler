@@ -16,7 +16,7 @@ dt = 0.0001        # pas temporel (s)
 n = 100000         # nombre d'itérations
 
 # Conditions initiales (petits angles : en radians)
-theta0 = 1.0      # angle initial (rad)
+theta0 = 0.1      # angle initial (rad)
 omega0 = 0.0      # vitesse angulaire initiale (rad/s)
 
 # Stockage

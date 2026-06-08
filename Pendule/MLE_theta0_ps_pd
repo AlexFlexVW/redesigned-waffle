@@ -1,0 +1,146 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+from numba import njit
+
+# Paramètres physiques
+g = 9.81
+l = 0.25
+w0 = np.sqrt(g / l)
+
+# Paramètres numériques
+dt = 1e-4
+n_steps = int(1e5)
+epsilon = 1e-6
+T_renorm = 500
+
+@njit
+def deriv_ps(state):
+    """D�riv�e du pendule simple."""
+    th, om = state
+    return np.array([om, -w0**2 * np.sin(th)])
+
+@njit
+def mle_benettin_RK4(theta0, omega0, n_iter):
+    """Calcul de l'exposant de Lyapunov pour le pendule simple."""
+    Y1 = np.array([theta0, omega0])
+    Y2 = np.array([theta0 + epsilon, omega0])
+    sum_log = 0.0
+    t = 0.0
+
+    for i in range(n_iter):
+        k1_1 = deriv_ps(Y1)
+        k2_1 = deriv_ps(Y1 + 0.5 * dt * k1_1)
+        k3_1 = deriv_ps(Y1 + 0.5 * dt * k2_1)
+        k4_1 = deriv_ps(Y1 + dt * k3_1)
+        Y1 = Y1 + (dt / 6.0) * (k1_1 + 2 * k2_1 + 2 * k3_1 + k4_1)
+
+        k1_2 = deriv_ps(Y2)
+        k2_2 = deriv_ps(Y2 + 0.5 * dt * k1_2)
+        k3_2 = deriv_ps(Y2 + 0.5 * dt * k2_2)
+        k4_2 = deriv_ps(Y2 + dt * k3_2)
+        Y2 = Y2 + (dt / 6.0) * (k1_2 + 2 * k2_2 + 2 * k3_2 + k4_2)
+
+        t += dt
+        if (i + 1) % T_renorm == 0:
+            dth = (Y2[0] - Y1[0] + np.pi) % (2 * np.pi) - np.pi
+            dom = Y2[1] - Y1[1]
+            d = np.sqrt(dth**2 + dom**2)
+            if d > 0:
+                sum_log += np.log(d / epsilon)
+                factor = epsilon / d
+                Y2[0] = Y1[0] + dth * factor
+                Y2[1] = Y1[1] + dom * factor
+
+    return sum_log / (n_iter * dt)
+
+@njit
+def ddtheta(th1, th2, w1, w2):
+    """Acc�l�rations du pendule double."""
+    delta = th1 - th2
+    sin_d = np.sin(delta)
+    cos_d = np.cos(delta)
+    det = 2.0 - cos_d**2
+    b1 = -w2**2 * sin_d - 2.0 * (g / l) * np.sin(th1)
+    b2 = w1**2 * sin_d - (g / l) * np.sin(th2)
+    d2th1 = (b1 - cos_d * b2) / det
+    d2th2 = (2.0 * b2 - cos_d * b1) / det
+    return d2th1, d2th2
+
+@njit
+def mle_benettin_euler_double(theta_init, omega_init, n_iter):
+    """Calcul de l'exposant de Lyapunov pour le pendule double."""
+    Y1 = np.array([theta_init[0], theta_init[1], omega_init[0], omega_init[1]])
+    Y2 = np.array([theta_init[0] + epsilon, theta_init[1], omega_init[0], omega_init[1]])
+    lyap_sum = 0.0
+    for i in range(n_iter):
+        d2th1_1, d2th2_1 = ddtheta(Y1[0], Y1[1], Y1[2], Y1[3])
+        w1_next_1 = Y1[2] + d2th1_1 * dt
+        w2_next_1 = Y1[3] + d2th2_1 * dt
+        th1_next_1 = Y1[0] + w1_next_1 * dt
+        th2_next_1 = Y1[1] + w2_next_1 * dt
+
+        d2th1_2, d2th2_2 = ddtheta(Y2[0], Y2[1], Y2[2], Y2[3])
+        w1_next_2 = Y2[2] + d2th1_2 * dt
+        w2_next_2 = Y2[3] + d2th2_2 * dt
+        th1_next_2 = Y2[0] + w1_next_2 * dt
+        th2_next_2 = Y2[1] + w2_next_2 * dt
+
+        diff_th1 = (th1_next_2 - th1_next_1 + np.pi) % (2 * np.pi) - np.pi
+        diff_th2 = (th2_next_2 - th2_next_1 + np.pi) % (2 * np.pi) - np.pi
+        diff_w1 = w1_next_2 - w1_next_1
+        diff_w2 = w2_next_2 - w2_next_1
+
+        dist = np.sqrt(diff_th1**2 + diff_th2**2 + diff_w1**2 + diff_w2**2)
+        if dist <= 0.0:
+            dist = epsilon
+
+        lyap_sum += np.log(dist / epsilon)
+        factor = epsilon / dist
+        Y2 = np.array([
+            th1_next_1 + diff_th1 * factor,
+            th2_next_1 + diff_th2 * factor,
+            w1_next_1 + diff_w1 * factor,
+            w2_next_1 + diff_w2 * factor,
+        ])
+        Y1 = np.array([th1_next_1, th2_next_1, w1_next_1, w2_next_1])
+
+    return lyap_sum / (n_iter * dt)
+
+
+def main():
+    output_dir = Path(r'C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_simple_et_double\lyapunov_exposant')
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    theta_values = np.linspace(0.01, np.pi / 2, 30)
+    simple_results = np.zeros_like(theta_values)
+    double_results = np.zeros_like(theta_values)
+
+    print('Calcul des exposants de Lyapunov...')
+    for idx, theta0 in enumerate(theta_values):
+        simple_results[idx] = mle_benettin_RK4(theta0, 0.0, n_steps)
+        double_results[idx] = mle_benettin_euler_double([np.pi / 2, theta0], [0.0, 0.0], n_steps)
+        if (idx + 1) % 5 == 0:
+            print(f'  Progression : {idx + 1}/{len(theta_values)}')
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(theta_values, simple_results, 'o-', color='tab:blue', label='Pendule simple (RK4)')
+    ax.plot(theta_values, double_results, 's-', color='tab:orange', label='Pendule double (Euler)')
+    ax.axhline(0.0, color='k', linestyle=':', alpha=0.5, label='λ = 0')
+
+    ax.set_xlabel('Angle initial (rad)')
+    ax.set_ylabel(r'Exposant de Lyapunov $\lambda$')
+    ax.set_title('Comparaison du MLE en fonction de l\'angle initial')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    chemin_fig = output_dir / 'comparaison_mle_theta0_ps_pd.png'
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.92)
+    plt.savefig(chemin_fig, dpi=300, bbox_inches='tight')
+    print(f'Graphique sauvegardé : {chemin_fig}')
+    plt.show()
+
+
+if __name__ == '__main__':
+    main()

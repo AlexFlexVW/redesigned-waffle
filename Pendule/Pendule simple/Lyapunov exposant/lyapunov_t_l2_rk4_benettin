@@ -4,7 +4,7 @@ from pathlib import Path
 from numba import njit
 
 # Paramètres globaux d'affichage
-plt.rcParams.update({'font.size': 14})
+plt.rcParams.update({'font.size': 15})
 
 # Paramètres physiques
 g = 9.81
@@ -13,7 +13,7 @@ w0 = np.sqrt(g/l)
 
 # Paramètres numériques
 coeff_n = 1
-p_n = 6
+p_n = 8
 dt = 0.0001
 n = int(coeff_n * 10**p_n)
 
