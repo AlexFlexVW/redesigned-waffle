@@ -1,0 +1,182 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import linregress
+import os
+
+plt.rcParams.update({'font.size': 15})
+
+
+# ==========================================
+# 1. PARAMÈTRES DU PENDULE ET CHEMINS
+# ==========================================
+m = 0.1  # Masse du pendule (en kg) - À MODIFIER
+L = 1.0  # Longueur du pendule (en mètres) - À MODIFIER
+g = 9.81 # Accélération de la pesanteur (m/s^2)
+
+# Indique ici le chemin exact du dossier contenant tes CSV
+# Le "r" devant les guillemets permet à Python de lire le chemin tel quel sous Windows
+dossier_csv = r"C:\Users\vanwa\OneDrive\Prépa\TIPE\WitMotion\WitMotion New Software\WitMotion(V2024.12.27.0)\Record\ps_ok" 
+
+# Noms de tes fichiers
+chemin_fichier1 = os.path.join(dossier_csv, "ps_89.csv")
+chemin_fichier2 = os.path.join(dossier_csv, "ps_90.csv") # Requis pour Lyapunov
+
+# ==========================================
+# 2. FONCTIONS DE TRAITEMENT
+# ==========================================
+
+# Modifie ton dictionnaire col_map (ou les variables équivalentes) pour coller au CSV :
+col_map = {
+    "time": "Time",  # ou "Chip Time()" selon celle qui contient tes secondes
+    "angle x": "Angle X(°)",
+    "angular velocity x": "Angular velocity X(°/s)"
+}
+
+# Ensuite, dans ta fonction load_csv, assure-toi d'utiliser exactement ces clés :
+def load_csv(filepath):
+    # Lecture du CSV sans utiliser la première colonne comme index
+    df = pd.read_csv(filepath, sep=',', decimal='.', index_col=False)
+    
+    # Nettoyage des espaces cachés dans les en-têtes de colonnes
+    df.columns = df.columns.str.strip()
+    
+    # --- NETTOYAGE CRUCIAL DES VALEURS DU TEMPS ---
+    # On force la colonne en texte et on supprime les espaces au début et à la fin (ex: " 22:49:10.334" devient "22:49:10.334")
+    col_time_propre = df["Time"].astype(str).str.strip()
+    
+    # Conversion du temps en secondes relatives
+    try:
+        # Tente d'abord de voir si ce sont déjà des secondes (numérique)
+        time = pd.to_numeric(col_time_propre, errors='raise').to_numpy(dtype=float)
+    except ValueError:
+        # Si c'est bien de l'horodatage, on le convertit avec le format exact
+        time_dt = pd.to_datetime(col_time_propre, format='%H:%M:%S.%f', errors='coerce')
+        
+        # S'il y a un souci de format, time_dt.dropna() empêche le plantage sur des lignes vides
+        if time_dt.dropna().empty:
+            raise ValueError("Impossible de décoder le format du temps. Les données de temps sont vides après nettoyage.")
+            
+        # Calcul du temps en secondes écoulées depuis t=0
+        time = (time_dt - time_dt.dropna().iloc[0]).dt.total_seconds().to_numpy(dtype=float)
+    
+    # Extraction de l'angle et de la vitesse
+    # 3. Extraction et conversion en RADIANS
+    theta = np.radians(pd.to_numeric(df["Angle X(°)"], errors='coerce').to_numpy(dtype=float))
+    omega = np.radians(pd.to_numeric(df["Angular velocity X(°/s)"], errors='coerce').to_numpy(dtype=float))
+    
+    # Nettoyage final des lignes incomplètes
+    masque_valide = ~np.isnan(time) & ~np.isnan(theta) & ~np.isnan(omega)
+    print(f"Points conservés après nettoyage complet : {np.sum(masque_valide)} / {len(df)}")
+    
+    return time[masque_valide], theta[masque_valide], omega[masque_valide]
+
+def tracer_et_sauvegarder_graphes(t, theta, omega, nom_sauvegarde="graphes_pendule.png"):
+    """Calcule l'énergie mécanique, trace les graphiques et sauvegarde l'image."""
+    # --- Calcul des énergies ---
+    # Énergie cinétique : Ec = 1/2 * m * v^2 = 1/2 * m * (L*omega)^2
+    Ec = 0.5 * m * (L * omega)**2 
+    
+    # Énergie potentielle : Ep = m*g*h = m*g*L*(1 - cos(theta)) 
+    # (Origine des hauteurs prise à la position d'équilibre)
+    Ep = m * g * L * (1 - np.cos(theta))
+    
+    # Énergie mécanique globale
+    Em = Ec + Ep
+    
+    # --- Tracé des graphiques ---
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+    
+    # Graphique de l'angle theta(t)
+    ax1.plot(t, np.degrees(theta), label="Angle $\\theta$", color='#1f77b4')
+    ax1.set_ylabel("Angle (°)")
+    ax1.set_title("Évolution de l'angle et des énergies du pendule simple")
+    ax1.grid(True, linestyle='--', alpha=0.7)
+    ax1.legend()
+    
+    # Graphique des énergies E(t)
+    ax2.plot(t, Ec, label="Énergie Cinétique ($E_c$)", color='green', alpha=0.7)
+    ax2.plot(t, Ep, label="Énergie Potentielle ($E_p$)", color='orange', alpha=0.7)
+    ax2.plot(t, Em, label="Énergie Mécanique ($E_m$)", color='red', linewidth=2)
+    ax2.set_xlabel("Temps (s)")
+    ax2.set_ylabel("Énergie (Joules)")
+    ax2.grid(True, linestyle='--', alpha=0.7)
+    ax2.legend()
+    
+    # Sauvegarde et affichage
+    plt.tight_layout()
+    plt.savefig(nom_sauvegarde, dpi=300)
+    print(f"Graphique sauvegardé avec succès sous : {nom_sauvegarde}")
+    plt.show()
+
+def calculer_exposant_lyapunov(t1, theta1, t2, theta2):
+    """Estime le plus grand exposant de Lyapunov à partir de 2 trajectoires."""
+    # On s'assure que les deux listes ont la même taille pour faire la différence
+    taille_min = min(len(t1), len(t2))
+    
+    t = t1[:taille_min] 
+    th1 = theta1[:taille_min]
+    th2 = theta2[:taille_min]
+    
+    # Écart absolu entre les deux trajectoires : |Δθ(t)|
+    delta_theta = np.abs(th1 - th2)
+    
+    # On retire les zéros stricts pour éviter une erreur avec le logarithme
+    masque = delta_theta > 0
+    t_valides = t[masque]
+    log_delta_theta = np.log(delta_theta[masque])
+    
+    # La divergence exponentielle s'observe sur les premiers instants.
+    # On choisit arbitrairement de faire la régression sur les 3 premières secondes.
+    # À adapter selon l'amortissement de ton pendule.
+    limite_temps = t_valides < 20.0 
+    
+    if np.sum(limite_temps) > 5:
+        # Régression linéaire : ln(|Δθ(t)|) ≈ λ * t + constante
+        pente, ordonnee, _, _, _ = linregress(t_valides[limite_temps], log_delta_theta[limite_temps])
+        lyapunov = pente
+    else:
+        print("Erreur : Pas assez de points temporels pour calculer l'exposant.")
+        return None
+        
+    # Tracé pour visualiser la divergence
+    plt.figure(figsize=(8, 5))
+    plt.plot(t_valides, log_delta_theta, label="$\\ln(\\delta)$ mesuré", color='purple', alpha=0.5)
+    plt.plot(t_valides[limite_temps], pente * t_valides[limite_temps] + ordonnee, 
+             color='black', linewidth=2, linestyle='--',
+             label=f"Régression ($\\lambda \\approx {lyapunov:.3f}$)")
+    
+    plt.xlabel("Temps (s)")
+    plt.ylabel("$\\ln(\\delta)$")
+    plt.title("Évaluation de la divergence des trajectoires (Lyapunov)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+    
+    return lyapunov
+
+# ==========================================
+# 3. EXÉCUTION DU SCRIPT
+# ==========================================
+if __name__ == "__main__":
+    # Vérification et traitement du Fichier 1
+    if os.path.exists(chemin_fichier1):
+        print("Lecture du fichier 1 en cours...")
+        t1, theta1, omega1 = load_csv(chemin_fichier1)
+        
+        # Trace et sauvegarde l'angle et l'énergie
+        tracer_et_sauvegarder_graphes(t1, theta1, omega1, nom_sauvegarde="ps_exp.png")
+        
+        # Vérification et traitement du Fichier 2 (pour Lyapunov)
+        if os.path.exists(chemin_fichier2):
+            print("\nLecture du fichier 2 et calcul de l'exposant de Lyapunov...")
+            t2, theta2, omega2 = load_csv(chemin_fichier2)
+            
+            exposant = calculer_exposant_lyapunov(t1, theta1, t2, theta2)
+            if exposant is not None:
+                print(f">>> Exposant de Lyapunov calculé : {exposant:.4f}")
+        else:
+            print(f"\n[!] Impossible de trouver {chemin_fichier2}. Le calcul de Lyapunov est ignoré.")
+    else:
+        print(f"[ERREUR] Le fichier {chemin_fichier1} est introuvable.")
+        print(f"Vérifie ton dossier : {dossier_csv}")

@@ -1,0 +1,172 @@
+"""
+pendule.py
+----------
+Extrait theta (Angle X) et omega (Angular velocity X) d'un CSV capteur IMU,
+calcule l'énergie du pendule simple, trace les graphes et sauvegarde les résultats.
+
+Usage
+-----
+    python pendule.py                        # sélecteur graphique
+    python pendule.py chemin/fichier.csv     # chemin direct
+"""
+
+import sys
+import os
+import argparse
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import tkinter as tk
+from tkinter import filedialog
+
+
+# ─── Constantes physiques ────────────────────────────────────────────────────
+
+G = 9.81   # m/s²
+L = 1.0    # longueur du pendule en mètres  ← à ajuster selon ton montage
+M = 1.0    # masse en kg                    ← à ajuster selon ton montage
+
+
+# ─── Sélection du fichier ────────────────────────────────────────────────────
+
+def select_file() -> str:
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    path = filedialog.askopenfilename(
+        title="Sélectionner le fichier CSV du pendule",
+        filetypes=[("Fichiers CSV", "*.csv"), ("Tous les fichiers", "*.*")],
+    )
+    root.destroy()
+    if not path:
+        sys.exit("Aucun fichier sélectionné.")
+    return path
+
+
+# ─── Nettoyage des noms de colonnes ─────────────────────────────────────────
+
+def clean(s: str) -> str:
+    """Retire tous les caractères spéciaux pour une comparaison robuste."""
+    return ''.join(c for c in s if c.isalnum() or c == ' ').strip().lower()
+
+
+# ─── Lecture du CSV ──────────────────────────────────────────────────────────
+
+def load_csv(filepath: str):
+    """
+    Retourne time, theta, omega comme tableaux numpy (float).
+    theta en degrés, omega en °/s.
+    """
+    # Essaye utf-8 puis latin-1 si échec
+    for enc in ("utf-8", "latin-1"):
+        try:
+            df = pd.read_csv(filepath, encoding=enc, sep=",")
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        sys.exit("Impossible de lire le fichier (encodage non reconnu).")
+
+    col_map = {clean(c): c for c in df.columns}
+
+    time  = pd.to_numeric(df[col_map["time"]], errors="coerce")
+    theta = pd.to_numeric(df[col_map["angle x"]], errors="coerce")
+    omega = pd.to_numeric(df[col_map["angular velocity x"]], errors="coerce")
+
+    # Retire les lignes où la conversion a échoué
+    mask  = ~(np.isnan(time) | np.isnan(theta) | np.isnan(omega))
+    time  = time[mask].to_numpy(dtype=float)
+    theta = theta[mask].to_numpy(dtype=float)
+    omega = omega[mask].to_numpy(dtype=float)
+
+    print(f"[OK] {len(time)} points chargés")
+    print(f"     theta ∈ [{theta.min():.2f}, {theta.max():.2f}] °")
+    print(f"     omega ∈ [{omega.min():.2f}, {omega.max():.2f}] °/s")
+
+    return time, theta, omega
+
+
+# ─── Énergie ────────────────────────────────────────────────────────────────
+
+def compute_energy(theta_deg, omega_deg_s):
+    """
+    Énergie mécanique du pendule simple.
+        E_c = 0.5 * M * (L * omega)²
+        E_p = M * G * L * (1 - cos(theta))
+        E   = E_c + E_p
+
+    theta en degrés, omega en °/s → conversion en rad et rad/s en interne.
+    """
+    theta_rad = np.radians(theta_deg)
+    omega_rad = np.radians(omega_deg_s)
+
+    Ec = 0.5 * M * (L * omega_rad) ** 2
+    Ep = M * G * L * (1 - np.cos(theta_rad))
+    E  = Ec + Ep
+
+    return Ec, Ep, E
+
+
+# ─── Graphes ────────────────────────────────────────────────────────────────
+
+def plot_all(time, theta, omega, Ec, Ep, E, source_path):
+    fig, axes = plt.subplots(3, 1, figsize=(11, 9), sharex=True)
+    fig.suptitle(f"Pendule — {os.path.basename(source_path)}", fontsize=13)
+
+    axes[0].plot(time, theta, color="#2563EB", linewidth=1)
+    axes[0].set_ylabel("θ  (°)")
+    axes[0].set_title("Angle")
+    axes[0].grid(True, alpha=0.3)
+
+    axes[1].plot(time, omega, color="#DC2626", linewidth=1)
+    axes[1].set_ylabel("ω  (°/s)")
+    axes[1].set_title("Vitesse angulaire")
+    axes[1].grid(True, alpha=0.3)
+
+    axes[2].plot(time, Ec, color="#16A34A", linewidth=1, label="$E_c$")
+    axes[2].plot(time, Ep, color="#D97706", linewidth=1, label="$E_p$")
+    axes[2].plot(time, E,  color="#7C3AED", linewidth=1.5, label="$E_{tot}$")
+    axes[2].set_ylabel("Énergie  (J)")
+    axes[2].set_xlabel("Temps  (s)")
+    axes[2].set_title("Énergie mécanique")
+    axes[2].legend()
+    axes[2].grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+
+# ─── Sauvegarde ─────────────────────────────────────────────────────────────
+
+def save(filepath, time, theta, omega, Ec, Ep, E):
+    outpath = os.path.splitext(filepath)[0] + "_extrait.csv"
+    df_out = pd.DataFrame({
+        "time":        time,
+        "theta_deg":   theta,
+        "omega_deg_s": omega,
+        "Ec_J":        Ec,
+        "Ep_J":        Ep,
+        "E_tot_J":     E,
+    })
+    df_out.to_csv(outpath, index=False, float_format="%.6f")
+    print(f"[OK] Sauvegardé → {outpath}")
+
+
+# ─── Main ────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filepath", nargs="?", default=None)
+    args = parser.parse_args()
+
+    filepath = args.filepath if args.filepath else select_file()
+
+    time, theta, omega = load_csv(filepath)
+    Ec, Ep, E          = compute_energy(theta, omega)
+
+    save(filepath, time, theta, omega, Ec, Ep, E)
+    plot_all(time, theta, omega, Ec, Ep, E, filepath)
+
+
+if __name__ == "__main__":
+    main()

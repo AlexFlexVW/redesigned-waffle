@@ -1,0 +1,143 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+# Paramètres globaux
+plt.rcParams.update({'font.size': 15})
+
+# Paramètres physiques (pendule double)
+g = 9.81
+l = 0.25
+
+# Simulation
+T = 10.0
+dt = 0.001
+n = int(T / dt) + 1
+
+# Conditions initiales (en radians)
+theta1_0 = 1.0
+theta2_0 = 1.5
+omega1_0 = 0.0
+omega2_0 = 0.0
+
+t = np.linspace(0, T, n)
+# Stockage : on utilise des tableaux 2D pour le pendule double
+theta = np.zeros((n, 2))
+omega = np.zeros((n, 2))
+
+theta[0, 0] = theta1_0
+theta[0, 1] = theta2_0
+omega[0, 0] = omega1_0
+omega[0, 1] = omega2_0
+
+def deriv(state):
+    """
+    Fonction dérivée pour le pendule double non-linéaire.
+    state = [theta1, theta2, omega1, omega2]
+    """
+    th1, th2, w1, w2 = state
+    delta = th1 - th2
+    sin_delta = np.sin(delta)
+    cos_delta = np.cos(delta)
+    
+    # Le Déterminant
+    det = 2 - cos_delta**2
+    
+    # Les termes de droite (Vecteur B)
+    b1 = - (w2**2) * sin_delta - 2 * (g/l) * np.sin(th1)
+    b2 = + (w1**2) * sin_delta - (g/l) * np.sin(th2)
+    
+    # Résolution matricielle
+    d2th1 = (b1 - cos_delta * b2) / det
+    d2th2 = (2 * b2 - cos_delta * b1) / det
+    
+    # Renvoie [dérivée_th1, dérivée_th2, dérivée_w1, dérivée_w2]
+    return np.array([w1, w2, d2th1, d2th2])
+
+# Boucle d'intégration RK4
+for i in range(n - 1):
+    y = np.array([theta[i, 0], theta[i, 1], omega[i, 0], omega[i, 1]])
+    
+    k1 = deriv(y)
+    k2 = deriv(y + 0.5 * dt * k1)
+    k3 = deriv(y + 0.5 * dt * k2)
+    k4 = deriv(y + dt * k3)
+    
+    y_next = y + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
+    
+    # Mise à jour des variables
+    theta[i + 1, 0] = y_next[0]
+    theta[i + 1, 1] = y_next[1]
+    omega[i + 1, 0] = y_next[2]
+    omega[i + 1, 1] = y_next[3]
+
+# --- CALCUL DES ÉNERGIES (Vectorisé pour plus de rapidité) ---
+delta_theta = theta[:, 0] - theta[:, 1]
+
+# Énergie cinétique adimensionnelle
+T_star = (l / (2 * g)) * (2 * omega[:, 0]**2 + omega[:, 1]**2 + 2 * omega[:, 0] * omega[:, 1] * np.cos(delta_theta))
+# Énergie potentielle adimensionnelle
+V_star = -(2 * np.cos(theta[:, 0]) + np.cos(theta[:, 1]))
+# Énergie totale
+E_total = T_star + V_star
+E0 = E_total[0]
+
+# --- QUANTIFICATION DE LA CONSERVATION ---
+sigma_rel  = np.std(E_total) / abs(E0) * 100               # en %
+drift      = np.polyfit(np.arange(len(E_total)), E_total, 1)[0]  # par itération
+range_rel  = (E_total.max() - E_total.min()) / abs(E0) * 100     # en %
+
+print(f"--- Conservation de l'énergie (Double Pendule  - RK4) ---")
+print(f"σ(E)/E₀  = {sigma_rel:.4e} %")
+print(f"Dérive   = {drift:.4e} (Unité E*)/itération")
+print(f"Range/E₀ = {range_rel:.4e} %")
+print("-----------------------------------------------------------")
+
+
+# --- GESTION DES FICHIERS ---
+# Attention, tu as écrit "resultat_code" dans ton prompt au lieu de "Resultat code", 
+# j'ai respecté ta chaîne de caractères exacte.
+output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_double\rk4")
+
+# SÉCURITÉ : On vérifie si le dossier existe vraiment
+if not output_dir.exists():
+    raise FileNotFoundError(
+        f"\n[ERREUR] Le dossier cible n'existe pas :\n'{output_dir}'\n"
+        "Veuillez le créer manuellement avant de lancer le script."
+    )
+
+# Noms de base avec les conditions initiales
+label_titre = fr"$\theta_1={theta1_0}, \theta_2={theta2_0}$"
+label_fichier = f"th1={theta1_0}_th2={theta2_0}"
+
+
+# 1. GRAPHIQUE DES ANGLES
+plt.figure(figsize=(9, 5))
+plt.plot(t, theta[:, 0], label=r'$\theta_1$')
+plt.plot(t, theta[:, 1], label=r'$\theta_2$')
+plt.xlabel('Temps (s)')
+plt.ylabel('Angle (rad)')
+plt.title(fr'Double Pendule — RK4 ({label_titre})')
+plt.legend()
+plt.grid(True)
+nom_fichier_angle = f"angle_plot_pd_RK4_NL_{label_fichier}.png"
+angle_path = output_dir / nom_fichier_angle
+plt.savefig(angle_path, bbox_inches='tight')
+
+
+# 2. GRAPHIQUE DE L'ÉNERGIE MÉCANIQUE (ZOOM)
+plt.figure(figsize=(9, 5))
+plt.plot(t, E_total, label='E Mécanique', linewidth=1.5, color='red')
+plt.xlabel('Temps (s)')
+plt.ylabel('Énergie (J)')
+plt.title(fr"Conservation de l'énergie mécanique — RK4 ({label_titre})")
+plt.legend()
+plt.grid(True)
+nom_fichier_energie_mec = f"energy_mec_plot_pd_RK4_NL_{label_fichier}.png"
+energy_tot_path = output_dir / nom_fichier_energie_mec
+plt.savefig(energy_tot_path, bbox_inches='tight')
+
+print(f"Graphiques sauvegardés avec succès dans :\n{output_dir}")
+
+# Affichage final
+plt.show()

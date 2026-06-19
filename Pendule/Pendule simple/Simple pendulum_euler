@@ -1,0 +1,123 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+plt.rcParams.update({'font.size': 15})
+
+# Paramètres physiques
+g = 9.81          # gravité
+l = 0.25          # longueur du pendule (m)
+w0 = np.sqrt(g/l) # pulsation
+m = 1.0           # masse
+
+# Paramètres numériques
+dt = 0.0001        # très petit pas pour limiter l'instabilité
+n = 100000         # nombre d'itérations
+
+# Conditions initiales (en radians)
+theta0 = 1.6  
+omega0 = 0.0
+
+# Stockage
+theta = np.zeros(n)
+omega = np.zeros(n)
+t = np.zeros(n)
+T_liste = []
+
+theta[0] = theta0
+omega[0] = omega0
+theta_max = theta0
+t_max = 0 
+
+# Méthode d'Euler semi-implicite (Euler-Cromer)
+for i in range(n-1):
+    omega[i+1] = omega[i] - w0**2 * np.sin(theta[i]) * dt 
+    theta[i+1] = theta[i] + omega[i+1] * dt 
+    t[i+1] = t[i] + dt
+
+# Energies (exacte pour Ep)
+Ec = 0.5 * m * (l * omega) ** 2
+Ep = m * g * l * (1 - np.cos(theta))
+E = Ec + Ep
+E0 = E[0]
+
+# --- QUANTIFICATION DE LA CONSERVATION ---
+sigma_rel  = np.std(E) / abs(E0) * 100          # en %
+drift      = np.polyfit(np.arange(len(E)), E, 1)[0]  # J/itération
+range_rel  = (E.max() - E.min()) / abs(E0) * 100     # en %
+
+print(f"σ(E)/E₀  = {sigma_rel:.4e} %")
+print(f"Dérive   = {drift:.4e} J/itération")
+print(f"Range/E₀ = {range_rel:.4e} %")
+# ---------------------------------------
+
+# Calcul de T en fonction de theta0
+for i in range (1,n-1):
+    if theta[i-1] < theta[i] and theta[i] > theta[i+1]:
+        T_liste.append(t[i] - t_max)
+        theta_max = theta[i]
+        t_max = t[i]
+
+print("Période moyenne :", np.mean(T_liste), "s")
+
+T0 = 2*np.pi/w0
+
+# Calcul intégral période théorique
+eps = 1e-9
+x = np.linspace(0, theta0 - eps, 1000)
+f = 1.0/np.sqrt(2*(np.cos(x) - np.cos(theta0)))
+integrale = np.trapezoid(f, x)
+T_theo = (2*T0/np.pi)*integrale
+print("T0 :", T0,"s")
+print("Période théorique (intégrale) :", T_theo,"s")
+
+# --- GESTION DES FICHIERS ---
+# Utilisation de Path (pathlib) avec ton chemin absolu sous Windows
+output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_simple\euler")
+output_dir.mkdir(parents=True, exist_ok=True)
+
+# 1. Affichage de l'angle
+plt.figure(figsize=(9, 5))
+plt.plot(t, theta, label="θ(t) numérique (Euler)")
+if theta0<=1 :#Si on peut faire l'apprxomiation des eptits angless
+    plt.plot(t, theta0 * np.cos(w0*t), label="Solution analytique (cos)", linestyle="--")
+plt.xlabel("Temps (s)")
+plt.ylabel("Angle (rad)")
+plt.title(fr'Pendule simple — Euler-Cromer ($\theta_0$={theta0} rad)')
+plt.legend()
+plt.grid(True)
+# Suppression du symbole '=' pour éviter les conflits Windows
+nom_fichier_angle = f"angle_plot_ps_euler_NL_th0_{theta0}_rad.png"
+angle_path = output_dir / nom_fichier_angle
+plt.savefig(angle_path, bbox_inches='tight')
+
+# 2. Affichage de toutes les énergies
+plt.figure(figsize=(9, 5))
+plt.plot(t, Ec, label='Ec')
+plt.plot(t, Ep, label='Ep')
+plt.plot(t, E, label='E totale', linewidth=4)
+plt.xlabel('Temps (s)')
+plt.ylabel('Énergie (J)')
+plt.title(fr'Énergies du pendule ($\theta_0$={theta0} rad)')
+plt.legend()
+plt.grid(True)
+nom_fichier_energie = f"energy_all_plot_ps_euler_NL_th0_{theta0}_rad.png"
+energy_path = output_dir / nom_fichier_energie
+plt.savefig(energy_path, bbox_inches='tight')
+
+# 3. Affichage de l'énergie mécanique uniquement
+plt.figure(figsize=(9, 5))
+plt.plot(t, E, label='E totale', linewidth=1.5, color='green')
+plt.xlabel('Temps (s)')
+plt.ylabel('Énergie (J)')
+plt.title(fr'Conservation énergie mécanique (Zoom) ($\theta_0$={theta0} rad)')
+plt.legend()
+plt.grid(True)
+nom_fichier_energie_mec = f"energy_mec_plot_ps_euler_NL_th0_{theta0}_rad.png"
+energy_tot_path = output_dir / nom_fichier_energie_mec
+plt.savefig(energy_tot_path, bbox_inches='tight')
+
+print(f"Graphiques sauvegardés avec succès dans : {output_dir}")
+
+# On affiche tout à la fin pour ne pas bloquer le script
+plt.show()

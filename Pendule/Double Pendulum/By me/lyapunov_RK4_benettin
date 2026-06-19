@@ -1,0 +1,176 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+from numba import njit
+
+# Paramètres globaux d'affichage
+plt.rcParams.update({'font.size': 14})
+
+# --- Paramètres Physiques  ---
+g = 9.81 
+l = 0.25 
+
+# --- Paramètres Numériques ---
+dt = 0.0001 
+n = int(1e5)
+
+# Conditions initiales
+epsilon = 1e-6  # Perturbation initiale
+th1_0 = np.pi/2
+th2_0 = np.pi/2
+theta0 = [th1_0, th2_0]
+omega0 = [0.0, 0.0]
+
+@njit
+def deriv(state):
+    """
+    Calcule les dérivées pour RK4 (Double pendule).
+    state = [th1, th2, w1, w2]
+    """
+    th1, th2, w1, w2 = state
+    delta = th1 - th2
+    sin_d, cos_d = np.sin(delta), np.cos(delta)
+    det = 2 - cos_d**2 
+    
+    b1 = -(w2**2) * sin_d - 2 * (g/l) * np.sin(th1) 
+    b2 = (w1**2) * sin_d - (g/l) * np.sin(th2) 
+    
+    d2th1 = (b1 - cos_d * b2) / det 
+    d2th2 = (2 * b2 - cos_d * b1) / det 
+    
+    return np.array([w1, w2, d2th1, d2th2])
+
+
+@njit
+def calcul_lyapunov_RK4(theta_init, omega_init):
+    """
+    Calcule l'exposant de Lyapunov max via l'algorithme de Benettin avec RK4.
+    """
+    # Y = [theta1, theta2, omega1, omega2]
+    Y1 = np.array([theta_init[0], theta_init[1], omega_init[0], omega_init[1]])
+    
+    # Trajectoire 2 décalée de epsilon sur theta1
+    Y2 = np.array([theta_init[0] + epsilon, theta_init[1], omega_init[0], omega_init[1]])
+
+    lyap_sum = 0
+    lambda_t = np.zeros(n)
+
+    for i in range(n-1):
+        # 1. Évolution Trajectoire 1 (RK4)
+        k1 = deriv(Y1)
+        k2 = deriv(Y1 + 0.5 * dt * k1)
+        k3 = deriv(Y1 + 0.5 * dt * k2)
+        k4 = deriv(Y1 + dt * k3)
+        Y1_next = Y1 + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
+
+        # 2. Évolution Trajectoire 2 (RK4)
+        k1_2 = deriv(Y2)
+        k2_2 = deriv(Y2 + 0.5 * dt * k1_2)
+        k3_2 = deriv(Y2 + 0.5 * dt * k2_2)
+        k4_2 = deriv(Y2 + dt * k3_2)
+        Y2_next = Y2 + (dt / 6.0) * (k1_2 + 2 * k2_2 + 2 * k3_2 + k4_2)
+
+        # 3. Calcul de la distance 4D (avec modulo sur les angles pour éviter les sauts de 2pi)
+        diff_th1 = (Y2_next[0] - Y1_next[0] + np.pi) % (2 * np.pi) - np.pi
+        diff_th2 = (Y2_next[1] - Y1_next[1] + np.pi) % (2 * np.pi) - np.pi
+        diff_w1 = Y2_next[2] - Y1_next[2]
+        diff_w2 = Y2_next[3] - Y1_next[3]
+
+        dist = np.sqrt(diff_th1**2 + diff_th2**2 + diff_w1**2 + diff_w2**2)
+
+        # Accumulation du taux de séparation
+        lyap_sum += np.log(dist / epsilon)
+        
+        # Renormalisation (On ramène Y2 à la distance epsilon de Y1)
+        Y2_next[0] = Y1_next[0] + (epsilon / dist) * diff_th1
+        Y2_next[1] = Y1_next[1] + (epsilon / dist) * diff_th2
+        Y2_next[2] = Y1_next[2] + (epsilon / dist) * diff_w1
+        Y2_next[3] = Y1_next[3] + (epsilon / dist) * diff_w2
+
+        # Mise à jour
+        Y1 = Y1_next
+        Y2 = Y2_next
+        
+        lambda_t[i+1] = lyap_sum / ((i+1) * dt)
+
+    return lambda_t
+
+
+# ==========================================
+# GESTION DES FICHIERS
+# ==========================================
+output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_double\RK4\lyapunov_exposant")
+
+if not output_dir.exists():
+    raise FileNotFoundError(
+        f"\n[ERREUR] Le dossier cible n'existe pas :\n'{output_dir}'\n"
+        "Veuillez le créer manuellement avant de lancer le script."
+    )
+
+# ==========================================
+# AFFICHAGES GRAPHIQUES
+# ==========================================
+
+# --- Graphique 1 : λ(t) pour une condition initiale fixe ---
+print("Calcul graphique 1 : λ(t) pour theta = (pi/2, pi/2) avec RK4...")
+iterations = np.arange(n)
+
+mle_res = calcul_lyapunov_RK4(theta0, omega0)
+
+fig1 = plt.figure(figsize=(10, 5))
+# Titre propre et bien espacé
+titre_1 = (f"Pendule double — RK4 — Perturbation ε={epsilon} sur θ₁\n"
+              f"(θ₁₀ = {th1_0:.3f}, θ₂₀ = {th2_0:.3f})")
+fig1.suptitle(titre_1, fontsize=16)
+
+plt.plot(iterations, mle_res, linewidth=0.8, color='tab:blue')
+plt.xlabel("Itérations")
+plt.ylabel("Exposant de Lyapunov $\\lambda$")
+plt.axhline(y=mle_res[-1], color='r', linestyle='--', label=f'MLE = {mle_res[-1]:.4f}')
+plt.grid(True, alpha=0.3)
+plt.legend()
+plt.tight_layout()
+fig1.subplots_adjust(top=0.88) # Laisse l'espace pour le Suptitle
+
+# Sauvegarde Graphique 1
+nom_fig1 = f"lyapunov_convergence_RK4_th1_{th1_0:.2f}_th2_{th2_0:.2f}.png"
+chemin_fig1 = output_dir / nom_fig1
+plt.savefig(chemin_fig1, bbox_inches='tight', dpi=300)
+print(f"Graphique 1 sauvegardé : {nom_fig1}")
+plt.show()
+
+
+# --- Graphique 2 : λ final en fonction de θ2_0 ---
+print("\nCalcul graphique 2 : Lyapunov en fonction de θ2_0 (Cela va prendre un peu de temps avec RK4)...")
+theta2_values = np.linspace(0.1, np.pi, 25) 
+lyapunov_exponents = np.zeros_like(theta2_values)
+
+for idx, th2_val in enumerate(theta2_values):
+    lyap_exp = calcul_lyapunov_RK4([th1_0, th2_val], omega0)[-1]
+    lyapunov_exponents[idx] = lyap_exp
+    
+    # Barre de progression
+    if (idx + 1) % 5 == 0:
+        print(f"  Progression: {idx + 1}/{len(theta2_values)}")
+
+fig2 = plt.figure(figsize=(10, 6))
+titre_2 = (f"Exposant de Lyapunov final en fonction de l'angle initial (RK4)\n"
+           f"$\\theta_1$ fixé à {th1_0:.2f} rad")
+fig2.suptitle(titre_2, fontsize=16)
+
+plt.plot(theta2_values, lyapunov_exponents, 'o-', linewidth=2, markersize=6, color='purple')
+plt.xlabel(f"Angle initial $\\theta_2$ (rad)")
+plt.ylabel("Exposant de Lyapunov $\\lambda$")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+fig2.subplots_adjust(top=0.88)
+
+# Sauvegarde Graphique 2
+nom_fig2 = f"lyapunov_th2_RK4_th1_{th1_0:.2f}.png"
+chemin_fig2 = output_dir / nom_fig2
+plt.savefig(chemin_fig2, bbox_inches='tight', dpi=300)
+print(f"Graphique 2 sauvegardé : {nom_fig2}")
+
+plt.show()
+
+print("\nSimulations terminées avec succès !")

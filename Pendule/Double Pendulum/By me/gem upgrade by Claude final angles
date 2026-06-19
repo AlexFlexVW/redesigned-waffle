@@ -9,9 +9,9 @@ l = 0.25
 dt = 0.0001       
 n = 100000        
 
-# Conditions initiales (en radians)
-theta1_0 = np.pi / 2   # 90°
-theta2_0 = np.pi / 2   # 90°
+# Conditions initiales (en radians)np.pi / 2   # 90°
+theta1_0 = np.pi/2
+theta2_0 = np.pi/2
 omega1_0 = 0.0
 omega2_0 = 0.0
 
@@ -98,7 +98,6 @@ for i in range(n):
 # Affichage
 plt.figure(figsize=(10, 8))
 
-plt.subplot(2, 1, 1)
 plt.plot(t, theta[:, 0], label=r'$\theta_1$')
 plt.plot(t, theta[:, 1], label=r'$\theta_2$')
 plt.ylabel('Angle (rad)')
@@ -106,14 +105,6 @@ plt.title(f'Double Pendule (Euler Symplectique) Angle initial: ({theta1_0:.3f}, 
 plt.legend()
 plt.grid(True)
 
-plt.subplot(2, 1, 2)
-plt.plot(t, E_total, label='Énergie Totale', color='red')
-plt.plot(t, E_kinetic, label='Cinétique', alpha=0.5)
-plt.plot(t, E_potential, label='Potentielle', alpha=0.5)
-plt.ylabel('Énergie adimensionnelle E / (mgl)')
-plt.xlabel('Temps (en s)')
-plt.legend()
-plt.grid(True)
 
 plt.tight_layout()
 plt.show()

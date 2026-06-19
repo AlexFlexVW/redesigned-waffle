@@ -1,6 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Définir la taille de police globale par défaut
+plt.rcParams.update({'font.size': 16})  # Aligne tout le monde sur 14
+
+'''# Ou pour configurer précisément chaque élément en une seule fois :
+plt.rcParams.update({
+    'axes.labelsize': 16,   # Nom des axes (X et Y)
+    'axes.titlesize': 18,   # Titre du graphique
+    'xtick.labelsize': 12,  # Graduations sur l'axe X
+    'ytick.labelsize': 12,  # Graduations sur l'axe Y
+    'legend.fontsize': 12   # Légende
+})'''
 # Paramètres physiques
 g = 9.81          # gravité
 l = 0.25          # longueur du pendule (m)
@@ -96,8 +107,8 @@ def plot_difference():
     plt.legend(fontsize=11)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.show()
-
+    plt.savefig('T0-T(dt).png', dpi=300, bbox_inches='tight')
+    plt.show()    
 
 if __name__ == "__main__":
     plot_difference()

@@ -1,0 +1,150 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+# Paramètres globaux Matplotlib
+plt.rcParams.update({'font.size': 15})
+
+# Paramètres physiques
+g = 9.81          
+l = 0.25          
+
+# Paramètres numériques
+dt = 0.0001       
+n = 100000        
+
+# Conditions initiales (en radians)
+theta1_0 = 1.0
+theta2_0 = 1.5
+omega1_0 = 0.0
+omega2_0 = 0.0
+
+# Stockage : Tableaux numpy initialisés à 0
+theta = np.zeros((n, 2))
+omega = np.zeros((n, 2))
+t = np.zeros(n)
+
+# Initialisation
+theta[0, 0] = theta1_0
+theta[0, 1] = theta2_0
+omega[0, 0] = omega1_0
+omega[0, 1] = omega2_0
+
+def ddtheta(theta1, theta2, omega1, omega2):
+    delta = theta1 - theta2
+    sin_delta = np.sin(delta)
+    cos_delta = np.cos(delta)
+    
+    # Le Déterminant
+    det = 2 - cos_delta**2
+    
+    # Les termes de droite (Vecteur B)
+    b1 = - (omega2**2) * sin_delta - 2 * (g/l) * np.sin(theta1)
+    b2 = + (omega1**2) * sin_delta - (g/l) * np.sin(theta2)
+    
+    # Résolution matricielle (A^-1 * B)
+    d2theta1 = (b1 - cos_delta * b2) / det
+    d2theta2 = (2 * b2 - cos_delta * b1) / det
+    
+    return d2theta1, d2theta2
+
+# Boucle Temporelle (Euler symplectique)
+for i in range(n-1):
+    d2th1, d2th2 = ddtheta(theta[i, 0], theta[i, 1], omega[i, 0], omega[i, 1])
+    
+    # Mise à jour des vitesses
+    omega[i+1, 0] = omega[i, 0] + d2th1 * dt
+    omega[i+1, 1] = omega[i, 1] + d2th2 * dt
+    
+    # Mise à jour des positions
+    theta[i+1, 0] = theta[i, 0] + omega[i+1, 0] * dt
+    theta[i+1, 1] = theta[i, 1] + omega[i+1, 1] * dt
+    
+    t[i+1] = t[i] + dt
+
+def energie(theta1, theta2, omega1, omega2, g, l):
+    """ Retourne l'énergie adimensionnelle (divisée par mgl). """
+    delta = theta1 - theta2
+    
+    # Énergie cinétique adimensionnelle
+    T_star = (l / (2 * g)) * (2 * omega1**2 + omega2**2 + 2 * omega1 * omega2 * np.cos(delta))
+    
+    # Énergie potentielle adimensionnelle
+    V_star = -(2 * np.cos(theta1) + np.cos(theta2))
+    
+    return T_star, V_star, T_star + V_star
+
+# Calcul des énergies
+E_cinetique   = np.zeros(n)
+E_potential = np.zeros(n)
+E_mec     = np.zeros(n)
+
+for i in range(n):
+    E_cinetique[i], E_potential[i], E_mec[i] = energie(
+        theta[i, 0], theta[i, 1],
+        omega[i, 0], omega[i, 1],
+        g, l
+    )
+
+# --- QUANTIFICATION DE LA CONSERVATION DE L'ÉNERGIE ---
+E0 = E_mec[0]
+sigma_rel  = np.std(E_mec) / abs(E0) * 100
+drift      = np.polyfit(np.arange(len(E_mec)), E_mec, 1)[0]
+range_rel  = (E_mec.max() - E_mec.min()) / abs(E0) * 100
+
+print("--- Conservation de l'énergie (Pendule double) Euler ---")
+print(f"σ(E)/E₀  = {sigma_rel:.4e} %")
+print(f"Dérive   = {drift:.4e} (Unité E*)/itération")
+print(f"Range/E₀ = {range_rel:.4e} %")
+print("--------------------------------------------------")
+
+
+# --- GESTION DES FICHIERS ---
+# Utilisation du chemin absolu exact vers ton dossier cible
+# Le 'r' devant les guillemets est crucial sous Windows pour éviter les bugs avec les '\'
+output_dir = Path(r"C:\Users\vanwa\Documents\VSCode Local\resultat_code\Pendule_double\euler")
+
+# Noms de fichiers propres (sans LaTeX ni caractères spéciaux)
+base_name = f"pd_euler_th1_{theta1_0}_th2_{theta2_0}"
+
+
+# 1. GRAPHIQUE DES ANGLES
+plt.figure(figsize=(9, 5))
+plt.plot(t, theta[:, 0], label=r'$\theta_1$')
+plt.plot(t, theta[:, 1], label=r'$\theta_2$')
+plt.xlabel('Temps (s)')
+plt.ylabel('Angle (rad)')
+plt.title(fr'Angles Pendule Double — Euler Symplectique ($\theta_1={theta1_0}, \theta_2={theta2_0}$)')
+plt.legend()
+plt.grid(True)
+angle_path = output_dir / f"angle_plot__{base_name}.png"
+plt.savefig(angle_path, bbox_inches='tight')
+
+# 2. GRAPHIQUE DE TOUTES LES ÉNERGIES
+plt.figure(figsize=(9, 5))
+plt.plot(t, E_cinetique, label='Cinétique', alpha=0.7)
+plt.plot(t, E_potential, label='Potentielle', alpha=0.7)
+plt.plot(t, E_mec, label='Énergie Mécanique', color='red', linewidth=1.5)
+plt.ylabel('Énergie (J)')
+plt.xlabel('Temps (s)')
+plt.title(fr"Energies du pendule — Euler ($\theta_1={theta1_0}, \theta_2={theta2_0}$)")
+plt.legend()
+plt.grid(True)
+energy_path = output_dir / f"energy_all_plot__{base_name}.png"
+plt.savefig(energy_path, bbox_inches='tight')
+
+# 3. GRAPHIQUE DE L'ÉNERGIE TOTALE UNIQUEMENT (ZOOM)
+plt.figure(figsize=(9, 5))
+plt.plot(t, E_mec, label='Énergie Mécanique', color='red', linewidth=1.5)
+plt.ylabel('Énergie (J)')
+plt.xlabel('Temps (s)')
+plt.title(fr"Conservation E — Euler ($\theta_1={theta1_0}, \theta_2={theta2_0}$)")
+plt.legend()
+plt.grid(True)
+energy_tot_path = output_dir / f"energy_tot_plot__{base_name}.png"
+plt.savefig(energy_tot_path, bbox_inches='tight')
+
+print(f"Graphiques sauvegardés avec succès dans : {output_dir}")
+
+# Affichage final à l'écran
+plt.show()
