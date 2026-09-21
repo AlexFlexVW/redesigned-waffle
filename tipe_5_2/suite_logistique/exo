@@ -1,0 +1,23 @@
+def liste_suite(r,nmin,nmax):
+    l=[0.5]
+    result=[]
+    for i in range (nmax):
+        if i==0 and nmin==0:result.append(0.5)
+        else:
+            u=r*l[i-1]*(1-l[i-1])
+            l.append(u)
+            if i>=nmin:result.append(u)
+    return result
+
+print(liste_suite(1.5,2,5))
+
+def bifucartion(nmin,nmax,epsilon):
+    result=[]
+    i=0
+    while i*epsilon<=4:
+        l=liste_suite(i*epsilon,nmin,nmax)
+        result.append([(i*epsilon,l[j]) for j in range(nmax-nmin)])
+        i+=1
+    return result
+
+print(bifucartion(1,20,0.1))
