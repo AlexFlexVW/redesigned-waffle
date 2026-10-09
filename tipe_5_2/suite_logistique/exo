@@ -1,5 +1,15 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+# Paramètres globaux
+plt.rcParams.update({'font.size': 15})
+
+u0=0.5
+r=4
+
 def liste_suite(r,nmin,nmax):
-    l=[0.5]
+    l=[u0]
     result=[]
     for i in range (nmax):
         if i==0 and nmin==0:result.append(0.5)
@@ -14,10 +24,48 @@ print(liste_suite(1.5,2,5))
 def bifucartion(nmin,nmax,epsilon):
     result=[]
     i=0
-    while i*epsilon<=4:
+    while i*epsilon<=r:
         l=liste_suite(i*epsilon,nmin,nmax)
         result.append([(i*epsilon,l[j]) for j in range(nmax-nmin)])
         i+=1
     return result
 
-print(bifucartion(1,20,0.1))
+
+nmin=100
+nmax=500
+epsilon=0.01
+t=[i*epsilon for i in range(int(r/epsilon))]
+l=bifucartion(nmin,nmax,epsilon)#l est un tableau de points (r,u(n)) 
+'''Pour obtenir les points d'accumulation de la suite u(n) on prend simplement 
+les valeurs de u(100) jusqu'à u(199). Ce sera à peu près réduit à un point si u(n) admet une 
+unique limite, sinon on aura plusieurs accumilations de points à différents pôles, appelées points 
+d'accumulation.'''
+
+x = []
+y = []
+for i in range(len(t)): 
+    for e in l[i] :
+        x.append(t[i])
+        y.append(e[1])
+
+# print(x,y)
+
+# 1. GRAPHIQUE DES ANGLES
+plt.plot(x, y,".",linewidth=0.1,markersize=0.5)
+plt.xlabel('Valeurs de r')
+plt.ylabel('points accumulation')
+plt.title(fr'Diagramme de bifurcation')
+plt.legend()
+plt.grid(True)
+plt.show()
+plt.savefig("test1.png")
+
+def exposant_lyapunov(liste_u,r):
+    n=len(liste_u)
+    somme=0
+    if r>0:
+        for i in range(n):
+            if liste_u[i]!=0.5:
+                somme+=np.log(r*abs(1-2*liste_u[i]))
+        return somme/n
+    return "r=0 donc exposant lyapunov = -inf"
