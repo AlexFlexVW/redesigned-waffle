@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -111,6 +112,8 @@ assert(A_ou_B('AB',10)=='A')
 assert(A_ou_B('AABA',10)=='B')
 
 def exposant_lyapunov_motif(r1,r2,motif,nmin,nmax,u0=0.5):
+    if r1 == 0 or r2 == 0:
+        return -10.0  # Valeur arbitraire très négative (stable)
     l=[u0]
     somme=0
     for i in range (1,nmax):
@@ -126,4 +129,63 @@ def exposant_lyapunov_motif(r1,r2,motif,nmin,nmax,u0=0.5):
         l.append(u)
         
     return float(somme/(nmax-nmin))
-print(exposant_lyapunov_motif(r1,r2,motif,100,200))
+print(exposant_lyapunov_motif(r1,r2,motif,0,10))
+
+def choix_couleur(l):
+    i = round(150*l)
+    R,V,B = i,0,0 # Nuances de rouge
+    couleur = '#%02x%02x%02x' % (R%256, V%256, B%256)
+    return couleur
+def choix_couleur_rgb(l):
+    """
+    Convertit l'exposant l en un triplet RGB (Rouge, Vert, Bleu) entre 0 et 255.
+    Reprend exactement la logique de l'énoncé : i = round(150 * l) % 256.
+    """
+    i = round(150 * l)
+    R = i % 256
+    V = 0
+    B = 0
+    return (R, V, B)
+N=100
+def fractale_lyapunov(motif, N=100, nmin=100, nmax=200):
+    image = np.zeros((N, N, 3), dtype=np.uint8)
+    r1=0.0
+    h=4.0/N
+    for i in range(N):
+        r2=0.0
+        for j in range(N):
+            l=exposant_lyapunov_motif(r1,r2,motif,nmin,nmax)
+            image[N - 1 - j, i] = choix_couleur_rgb(l)
+            r2+=h
+        r1+=h
+        # Affichage de la progression dans le terminal tous les 10%
+        if (i + 1) % max(1, (N // 10)) == 0:
+            print(f"Progression : {int((i + 1) / N * 100)}%")
+
+    # --- GESTION DU DOSSIER ET SAUVEGARDE ---
+    # Le préfixe r devant les guillemets (raw string) évite que les '\' de Windows 
+    # soient interprétés comme des caractères spéciaux (\n, \t, etc.).
+    dossier = r"C:\Users\vanwa\Documents\VSCode Local\redesigned-waffle\tipe_5_2\suite_logistique"
+
+    # Crée le dossier s'il n'existe pas déjà (évite une erreur FileNotFoundError)
+    os.makedirs(dossier, exist_ok=True)
+
+    chemin_fichier = os.path.join(dossier, f"fractale_{motif}_{N}x{N}.png")
+    # Configuration de l'affichage avec Matplotlib
+    plt.figure(figsize=(6, 6))
+    # extent=[0, 4, 0, 4] permet d'afficher les vraies valeurs de r1 et r2 sur les axes
+    plt.imshow(image, extent=[0, 4, 0, 4])
+    plt.title(f"Fractale de Lyapunov - Motif : {motif}")
+    plt.xlabel("$r_1$")
+    plt.ylabel("$r_2$")
+    
+    # Enregistrement de l'image en haute qualité
+    plt.savefig(chemin_fichier, dpi=300, bbox_inches='tight')
+    print(f"Image enregistrée avec succès dans :\n{chemin_fichier}")
+    
+    # Ouverture d'une fenêtre graphique pour afficher l'image
+    plt.show()
+
+# Lancement du programme
+if __name__ == "__main__":
+    fractale_lyapunov('AB', N=500)
