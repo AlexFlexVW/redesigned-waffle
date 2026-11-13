@@ -7,6 +7,10 @@ plt.rcParams.update({'font.size': 15})
 
 u0=0.5
 r=4
+r1=0.5
+r2=3.5
+motif='AB'
+
 
 def liste_suite(r,nmin,nmax):
     l=[u0]
@@ -16,10 +20,12 @@ def liste_suite(r,nmin,nmax):
         else:
             u=r*l[i-1]*(1-l[i-1])
             l.append(u)
-            if i>=nmin:result.append(u)
+            if i>=nmin:
+                result.append(u)
     return result
-
-print(liste_suite(1.5,2,5))
+'''Par exemple liste_suite(1.5,0,5) renvoie les 5 premiers termes de la suite définie par le
+paramètre r = 1.5 : [0.5, 0.375, 0.35156 . . . , 0.34194 . . . , 0.33753 . . .].'''
+#print(liste_suite(1.5,0,5))
 
 def bifucartion(nmin,nmax,epsilon):
     result=[]
@@ -30,12 +36,22 @@ def bifucartion(nmin,nmax,epsilon):
         i+=1
     return result
 
+def exposant_lyapunov(liste_u,r):
+    n=len(liste_u)
+    somme=0
+    if r>0:
+        for i in range(n):
+            u_n = liste_u[i][1]
+            if u_n!=0.5:
+                somme+=np.log(r*abs(1-2*u_n))
+        return float(somme/n)
+    return np.nan
 
 nmin=100
-nmax=500
+nmax=200
 epsilon=0.01
 t=[i*epsilon for i in range(int(r/epsilon))]
-l=bifucartion(nmin,nmax,epsilon)#l est un tableau de points (r,u(n)) 
+l=bifucartion(nmin,nmax,epsilon)#l est un tableau de tableau de points (r,u(n)) ou r change à chaque ligne 
 '''Pour obtenir les points d'accumulation de la suite u(n) on prend simplement 
 les valeurs de u(100) jusqu'à u(199). Ce sera à peu près réduit à un point si u(n) admet une 
 unique limite, sinon on aura plusieurs accumilations de points à différents pôles, appelées points 
@@ -43,14 +59,18 @@ d'accumulation.'''
 
 x = []
 y = []
-for i in range(len(t)): 
-    for e in l[i] :
-        x.append(t[i])
-        y.append(e[1])
+liste_lyapunov=[]
+def tracer_diag_bif():
 
-# print(x,y)
+    for i in range(len(t)): 
+        liste_lyapunov.append(exposant_lyapunov(l[i],t[i]))#fait la taille de t
+        #print(t[i],l[i][0][1],liste_lyapunov[i])
+        for e in l[i] :#l[i] contient nmax-nmin éléments ici 100
+            x.append(t[i])#r(epsilon)
+            y.append(e[1])#u(n)
 
 # 1. GRAPHIQUE DES ANGLES
+'''
 plt.plot(x, y,".",linewidth=0.1,markersize=0.5)
 plt.xlabel('Valeurs de r')
 plt.ylabel('points accumulation')
@@ -59,13 +79,51 @@ plt.legend()
 plt.grid(True)
 plt.show()
 plt.savefig("test1.png")
+'''
+def unique (l):
+    result=[]
+    for i in range(len(l)):
+        if l[i] not in result:
+            result.append(l[i])
+    return result
 
-def exposant_lyapunov(liste_u,r):
-    n=len(liste_u)
+#print(unique(liste_lyapunov))
+#assert(len(liste_lyapunov)==len(t))
+
+def bifurcation_lyapunov():
+    
+    plt.plot(x, y,".",linewidth=0.1,markersize=0.5)
+    plt.plot(t,liste_lyapunov)
+    #plt.xlabel('Valeurs de r')
+    #plt.ylabel('points accumulation')
+    #plt.title(fr'Diagramme de bifurcation')
+    #plt.legend()
+    plt.grid(True)
+    plt.show()
+    plt.savefig("test2.png")
+
+#bifurcation_lyapunov()
+
+def A_ou_B(motif,n):
+    r=n % len(motif)
+    return motif[r]
+assert(A_ou_B('AB',10)=='A')
+assert(A_ou_B('AABA',10)=='B')
+
+def exposant_lyapunov_motif(r1,r2,motif,nmin,nmax,u0=0.5):
+    l=[u0]
     somme=0
-    if r>0:
-        for i in range(n):
-            if liste_u[i]!=0.5:
-                somme+=np.log(r*abs(1-2*liste_u[i]))
-        return somme/n
-    return "r=0 donc exposant lyapunov = -inf"
+    for i in range (1,nmax):
+        if A_ou_B(motif,i-1)=='A':
+            r=r1
+        else:
+            r=r2
+
+        u=r*l[i-1]*(1-l[i-1])
+        if i>=nmin and l[i-1]!=0.5:
+            somme+=np.log(r*abs(1-2*l[i-1]))
+           
+        l.append(u)
+        
+    return float(somme/(nmax-nmin))
+print(exposant_lyapunov_motif(r1,r2,motif,100,200))
